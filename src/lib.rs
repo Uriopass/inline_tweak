@@ -57,7 +57,7 @@ mod itweak {
         TweakValue {
             position,
             last_checked: now,
-            file_modified: last_modified(file).unwrap_or(SystemTime::now()),
+            file_modified: last_modified(file).unwrap_or_else(SystemTime::now),
             value: Box::new(value),
         }
     }
