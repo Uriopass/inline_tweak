@@ -1,5 +1,7 @@
 # Inline tweak
 
+[![Crates.io](https://img.shields.io/crates/v/inline_tweak.svg)](https://crates.io/crates/inline_tweak)
+
 Inline tweaks is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
 by tuxedo labs.  
 
