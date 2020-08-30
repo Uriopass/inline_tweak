@@ -28,6 +28,7 @@ mod itweak {
         default: T,
         file: &'static str,
         line: u32,
+        column: u32,
     ) -> Option<T> {
         let mut lock = VALUES.lock().unwrap();
         let entry = lock.entry((file, line));
@@ -57,9 +58,23 @@ mod itweak {
                 .lines()
                 .nth((line - 1) as usize)?
                 .ok()?;
-            let val = line_str.find("tweak!(")? + 7; // 7 is length of "tweak!("
-            let end = line_str[val..].find(')')? + val;
-            let parsed: T = FromStr::from_str(&line_str[val..end]).ok()?;
+            let start = (column + 6) as usize;
+            let mut prec = 1;
+
+            // find matching parenthesis
+            let end = line_str[start..].chars().position(|c| {
+                match c {
+                    ')' if prec == 1 => {
+                        return true;
+                    }
+                    ')' => prec -= 1,
+                    '(' => prec += 1,
+                    _ => {}
+                }
+                false
+            })?;
+
+            let parsed: T = FromStr::from_str(&line_str[start..start + end]).ok()?;
             tweak.file_modified = last_modified;
             tweak.value = Box::new(parsed);
         }
@@ -73,8 +88,9 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     default: T,
     file: &'static str,
     line: u32,
+    column: u32,
 ) -> T {
-    itweak::get_value(default.clone(), file, line).unwrap_or_else(move || default)
+    itweak::get_value(default.clone(), file, line, column).unwrap_or_else(move || default)
 }
 
 #[cfg(not(debug_assertions))]
@@ -82,6 +98,7 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     default: T,
     _file: &'static str,
     _line: u32,
+    _column: u32,
 ) -> T {
     default
 }
@@ -89,6 +106,6 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
 #[macro_export]
 macro_rules! tweak {
     ($e: literal) => {
-        inline_tweak($e, file!(), line!())
+        inline_tweak($e, file!(), line!(), column!())
     };
 }

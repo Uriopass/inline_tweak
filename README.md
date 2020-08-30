@@ -7,7 +7,6 @@ by tuxedo labs.
 
 Tweak any number literal directly from your code, changes to the source appear while running the program.  
 It works by parsing the file when a change occurs.  
-Beware though, since it only has access to the file and line information, you cannot use two tweak!(..) on the same line.
 
 The library is minimal, only requiring the lazy_static dependency to hold modified values.  
 In release mode, the tweaking code is disabled and compiled away.  
