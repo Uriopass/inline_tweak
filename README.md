@@ -25,6 +25,18 @@ fn main() {
 }
 ```
 
+If continuously looping the code is not necessary, `watch!()` can be used as a "breakpoint":
+```rust
+use inline_tweak::*;
+
+fn main() {
+    loop {
+        println!("{}", tweak!(3.14));
+        watch!(); // The thread will sleep here until anything in the file changes
+    }
+}
+```
+
 ## Installation
 
 Simply add this line to your Cargo.toml
