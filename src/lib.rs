@@ -133,6 +133,6 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
 #[macro_export]
 macro_rules! tweak {
     ($e: literal) => {
-        inline_tweak($e, file!(), line!(), column!())
+        inline_tweak::inline_tweak($e, file!(), line!(), column!())
     };
 }
