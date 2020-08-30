@@ -25,7 +25,7 @@ fn main() {
 }
 ```
 
-If continuously looping the code is not necessary, `watch!()` can be used as a "breakpoint":
+`inline_tweak` also provides a `watch!()` macro that sleeps until the file is modified, akin to a breakpoint:
 ```rust
 use inline_tweak::*;
 
