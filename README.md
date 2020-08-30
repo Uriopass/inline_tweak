@@ -25,6 +25,18 @@ fn main() {
 }
 ```
 
+`inline_tweak` also provides a `watch!()` macro that sleeps until the file is modified, akin to a breakpoint:
+```rust
+use inline_tweak::*;
+
+fn main() {
+    loop {
+        println!("{}", tweak!(3.14));
+        watch!(); // The thread will sleep here until anything in the file changes
+    }
+}
+```
+
 ## Installation
 
 Simply add this line to your Cargo.toml

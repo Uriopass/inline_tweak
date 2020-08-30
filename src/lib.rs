@@ -16,6 +16,11 @@ mod itweak {
         value: Box<dyn Any + Send>,
     }
 
+    struct FileWatcher {
+        last_checked: Instant,
+        file_modified: SystemTime,
+    }
+
     lazy_static! {
         static ref VALUES: Mutex<HashMap<(&'static str, u32, u32), TweakValue>> =
             Mutex::new(HashMap::new());
@@ -23,6 +28,8 @@ mod itweak {
         // Remember other tweak!s to know which one I am
         static ref POSITIONS: Mutex<HashMap<(&'static str, u32), Vec<u32>>> =
             Mutex::new(HashMap::new());
+
+        static ref FILES: Mutex<HashMap<&'static str, FileWatcher>> = Mutex::new(HashMap::new());
     }
 
     fn last_modified(file: &'static str) -> Option<SystemTime> {
@@ -108,6 +115,29 @@ mod itweak {
 
         tweak.value.downcast_ref().cloned()
     }
+
+    pub fn is_modified(file: &'static str) -> bool {
+        let mut lock = FILES.lock().unwrap();
+        let entry = lock.entry(file);
+
+        let now = Instant::now();
+
+        let watcher = entry.or_insert_with(|| FileWatcher {
+            last_checked: now,
+            file_modified: last_modified(file).unwrap_or_else(SystemTime::now),
+        });
+
+        watcher.last_checked = now;
+
+        let last_modified = last_modified(file).unwrap_or_else(SystemTime::now);
+        last_modified
+            .duration_since(watcher.file_modified)
+            .map(|time| {
+                watcher.file_modified = last_modified;
+                time.as_secs_f32() > 0.5
+            })
+            .unwrap_or(true)
+    }
 }
 
 #[cfg(debug_assertions)]
@@ -134,5 +164,22 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
 macro_rules! tweak {
     ($e: literal) => {
         inline_tweak::inline_tweak($e, file!(), line!(), column!())
+    };
+}
+
+#[cfg(debug_assertions)]
+pub fn watch_file(file: &'static str) {
+    while !itweak::is_modified(file) {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+}
+
+#[cfg(not(debug_assertions))]
+pub fn watch_file(_file: &'static str) {}
+
+#[macro_export]
+macro_rules! watch {
+    () => {
+        inline_tweak::watch_file(file!());
     };
 }
