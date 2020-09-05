@@ -26,7 +26,7 @@ mod itweak {
             Mutex::new(HashMap::new());
 
         // Remember other tweak!s to know which one I am
-        static ref POSITIONS: Mutex<HashMap<(&'static str, u32), Vec<u32>>> =
+        static ref POSITIONS: Mutex<HashMap<&'static str, Vec<(u32, u32)>>> =
             Mutex::new(HashMap::new());
 
         static ref FILES: Mutex<HashMap<&'static str, FileWatcher>> = Mutex::new(HashMap::new());
@@ -45,14 +45,14 @@ mod itweak {
         value: T,
     ) -> TweakValue {
         let mut lock = POSITIONS.lock().unwrap();
-        let other_tweaks = lock.entry((file, line)).or_default();
+        let other_tweaks = lock.entry(file).or_default();
 
-        let position = match other_tweaks.binary_search(&column) {
+        let position = match other_tweaks.binary_search(&(line, column)) {
             Ok(x) => x, // Shouldn't happen
             Err(x) => x,
         };
 
-        other_tweaks.insert(position, column);
+        other_tweaks.insert(position, (line, column));
 
         TweakValue {
             position,
@@ -88,11 +88,15 @@ mod itweak {
             .as_secs_f32()
             > 0.5
         {
+            let mut tweaks_seen = 0;
             let line_str = BufReader::new(File::open(file).ok()?)
                 .lines()
-                .nth((line - 1) as usize)?
-                .ok()?;
-            let val_str = line_str.split("tweak!(").nth(tweak.position + 1)?;
+                .filter_map(|line| line.ok())
+                .find(|line| {
+                    tweaks_seen += line.matches("tweak!(").count();
+                    tweaks_seen > tweak.position
+                })?;
+            let val_str = line_str.rsplit("tweak!(").nth(tweaks_seen - tweak.position - 1)?;
             let mut prec = 1;
 
             // find matching parenthesis
