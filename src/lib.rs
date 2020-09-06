@@ -2,7 +2,7 @@
 mod itweak {
     use lazy_static::*;
     use std::any::Any;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::str::FromStr;
@@ -11,9 +11,9 @@ mod itweak {
 
     struct TweakValue {
         position: usize,
+        value: Option<Box<dyn Any + Send>>,
         last_checked: Instant,
         file_modified: SystemTime,
-        value: Box<dyn Any + Send>,
     }
 
     struct FileWatcher {
@@ -24,69 +24,84 @@ mod itweak {
     lazy_static! {
         static ref VALUES: Mutex<HashMap<(&'static str, u32, u32), TweakValue>> =
             Mutex::new(HashMap::new());
-
-        // Remember other tweak!s to know which one I am
-        static ref POSITIONS: Mutex<HashMap<&'static str, Vec<(u32, u32)>>> =
-            Mutex::new(HashMap::new());
-
-        static ref FILES: Mutex<HashMap<&'static str, FileWatcher>> = Mutex::new(HashMap::new());
+        static ref PARSED_FILES: Mutex<HashSet<&'static str>> = Mutex::new(HashSet::new());
+        static ref WATCHERS: Mutex<HashMap<&'static str, FileWatcher>> = Mutex::new(HashMap::new());
     }
 
     fn last_modified(file: &'static str) -> Option<SystemTime> {
         File::open(file).ok()?.metadata().ok()?.modified().ok()
     }
 
-    #[cold]
-    fn insert_tweak<T: 'static + FromStr + Clone + Send>(
-        now: Instant,
-        file: &'static str,
-        line: u32,
-        column: u32,
-        value: T,
-    ) -> TweakValue {
-        let mut lock = POSITIONS.lock().unwrap();
-        let other_tweaks = lock.entry(file).or_default();
+    // Assume that the first time a tweak! is called, all tweak!s will be in original position.
+    fn parse_tweaks(file: &'static str) -> Option<()> {
+        let mut fileinfos = PARSED_FILES.lock().unwrap();
 
-        let position = match other_tweaks.binary_search(&(line, column)) {
-            Ok(x) => x, // Shouldn't happen
-            Err(x) => x,
-        };
+        if !fileinfos.contains(&file) {
+            let mut values = VALUES.lock().unwrap();
 
-        other_tweaks.insert(position, (line, column));
+            let file_modified = last_modified(file).unwrap_or_else(SystemTime::now);
+            let now = Instant::now();
 
-        TweakValue {
-            position,
-            last_checked: now,
-            file_modified: last_modified(file).unwrap_or_else(SystemTime::now),
-            value: Box::new(value),
+            let mut tweaks_seen = 0;
+            for (line_n, line) in BufReader::new(File::open(file).ok()?)
+                .lines()
+                .filter_map(|line| line.ok())
+                .enumerate()
+            {
+                let mut column: u32 = 0;
+                for tweak in line.split("tweak!(") {
+                    if column == 0 {
+                        column = tweak.len() as u32;
+                        continue;
+                    }
+                    values.insert(
+                        (file, line_n as u32 + 1, column + 1),
+                        TweakValue {
+                            position: tweaks_seen,
+                            value: None,
+                            last_checked: now,
+                            file_modified,
+                        },
+                    );
+                    column += tweak.len() as u32 + 7;
+                    tweaks_seen += 1;
+                }
+            }
+
+            fileinfos.insert(file);
         }
+
+        Some(())
     }
 
     pub(crate) fn get_value<T: 'static + FromStr + Clone + Send>(
-        default: T,
         file: &'static str,
         line: u32,
         column: u32,
     ) -> Option<T> {
+        parse_tweaks(file);
+
         let mut lock = VALUES.lock().unwrap();
-        let entry = lock.entry((file, line, column));
+        let tweak = lock.get_mut(&(file, line, column))?;
 
         let now = Instant::now();
 
-        let tweak = entry.or_insert_with(|| insert_tweak(now, file, line, column, default.clone()));
-
-        if now.duration_since(tweak.last_checked).as_secs_f32() < 0.5 {
-            return tweak.value.downcast_ref().cloned();
+        if let Some(value) = tweak.value.as_ref() {
+            if now.duration_since(tweak.last_checked).as_secs_f32() < 0.5 {
+                // happy path
+                return value.downcast_ref().cloned();
+            }
         }
 
         tweak.last_checked = now;
 
         let last_modified = last_modified(file)?;
-        if last_modified
-            .duration_since(tweak.file_modified)
-            .ok()?
-            .as_secs_f32()
-            > 0.5
+        if tweak.value.is_none()
+            || last_modified
+                .duration_since(tweak.file_modified)
+                .ok()?
+                .as_secs_f32()
+                > 0.5
         {
             let mut tweaks_seen = 0;
             let line_str = BufReader::new(File::open(file).ok()?)
@@ -96,7 +111,9 @@ mod itweak {
                     tweaks_seen += line.matches("tweak!(").count();
                     tweaks_seen > tweak.position
                 })?;
-            let val_str = line_str.rsplit("tweak!(").nth(tweaks_seen - tweak.position - 1)?;
+            let val_str = line_str
+                .rsplit("tweak!(")
+                .nth(tweaks_seen - tweak.position - 1)?;
             let mut prec = 1;
 
             // find matching parenthesis
@@ -114,14 +131,15 @@ mod itweak {
 
             let parsed: T = FromStr::from_str(&val_str[..end]).ok()?;
             tweak.file_modified = last_modified;
-            tweak.value = Box::new(parsed);
+            tweak.value = Some(Box::new(parsed.clone()));
+            return Some(parsed);
         }
 
-        tweak.value.downcast_ref().cloned()
+        tweak.value.as_ref()?.downcast_ref().cloned()
     }
 
-    pub fn is_modified(file: &'static str) -> bool {
-        let mut lock = FILES.lock().unwrap();
+    pub fn watch_modified(file: &'static str) -> bool {
+        let mut lock = WATCHERS.lock().unwrap();
         let entry = lock.entry(file);
 
         let now = Instant::now();
@@ -151,7 +169,7 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     line: u32,
     column: u32,
 ) -> T {
-    itweak::get_value(default.clone(), file, line, column).unwrap_or_else(move || default)
+    itweak::get_value(file, line, column).unwrap_or(default)
 }
 
 #[cfg(not(debug_assertions))]
@@ -173,7 +191,7 @@ macro_rules! tweak {
 
 #[cfg(debug_assertions)]
 pub fn watch_file(file: &'static str) {
-    while !itweak::is_modified(file) {
+    while !itweak::watch_modified(file) {
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
 }
