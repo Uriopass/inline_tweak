@@ -12,6 +12,7 @@ mod itweak {
     struct TweakValue {
         position: usize,
         value: Option<Box<dyn Any + Send>>,
+        initialized: bool,
         last_checked: Instant,
         file_modified: SystemTime,
     }
@@ -59,6 +60,7 @@ mod itweak {
                         TweakValue {
                             position: tweaks_seen,
                             value: None,
+                            initialized: false,
                             last_checked: now,
                             file_modified,
                         },
@@ -73,27 +75,10 @@ mod itweak {
         Some(())
     }
 
-    pub(crate) fn get_value<T: 'static + FromStr + Clone + Send>(
+    fn update_tweak<T: 'static + FromStr + Clone + Send>(
+        tweak: &mut TweakValue,
         file: &'static str,
-        line: u32,
-        column: u32,
-    ) -> Option<T> {
-        parse_tweaks(file);
-
-        let mut lock = VALUES.lock().unwrap();
-        let tweak = lock.get_mut(&(file, line, column))?;
-
-        let now = Instant::now();
-
-        if let Some(value) = tweak.value.as_ref() {
-            if now.duration_since(tweak.last_checked).as_secs_f32() < 0.5 {
-                // happy path
-                return value.downcast_ref().cloned();
-            }
-        }
-
-        tweak.last_checked = now;
-
+    ) -> Option<()> {
         let last_modified = last_modified(file)?;
         if tweak.value.is_none()
             || last_modified
@@ -113,12 +98,12 @@ mod itweak {
             let val_str = line_str
                 .rsplit("tweak!(")
                 .nth(tweaks_seen - tweak.position - 1)?;
-            let mut prec = 1;
 
-            // find matching parenthesis
+            // Find end of tweak
+            let mut prec = 1;
             let end = val_str.chars().position(|c| {
                 match c {
-                    ')' if prec == 1 => {
+                    ';' | ')' if prec == 1 => {
                         return true;
                     }
                     ')' => prec -= 1,
@@ -128,10 +113,33 @@ mod itweak {
                 false
             })?;
 
-            let parsed: T = FromStr::from_str(&val_str[..end]).ok()?;
+            let parsed: Option<T> = FromStr::from_str(&val_str[..end]).ok();
             tweak.file_modified = last_modified;
-            tweak.value = Some(Box::new(parsed.clone()));
-            return Some(parsed);
+            tweak.last_checked = Instant::now();
+            tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
+        }
+
+        Some(())
+    }
+
+    pub(crate) fn get_value<T: 'static + FromStr + Clone + Send>(
+        initial_value: Option<T>,
+        file: &'static str,
+        line: u32,
+        column: u32,
+    ) -> Option<T> {
+        parse_tweaks(file);
+
+        let mut lock = VALUES.lock().unwrap();
+        let mut tweak = lock.get_mut(&(file, line, column))?;
+
+        if !tweak.initialized {
+            tweak.value = initial_value.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
+            tweak.initialized = true;
+        }
+
+        if Instant::now().duration_since(tweak.last_checked).as_secs_f32() > 0.5 {
+            update_tweak::<T>(&mut tweak, file)?;
         }
 
         tweak.value.as_ref()?.downcast_ref().cloned()
@@ -163,28 +171,35 @@ mod itweak {
 
 #[cfg(debug_assertions)]
 pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
-    default: T,
+    initial_value: Option<T>,
     file: &'static str,
     line: u32,
     column: u32,
-) -> T {
-    itweak::get_value(file, line, column).unwrap_or(default)
+) -> Option<T> {
+    itweak::get_value(initial_value, file, line, column)
+}
+
+#[cfg(debug_assertions)]
+#[macro_export]
+macro_rules! tweak {
+    ($default:expr) => {
+        inline_tweak::inline_tweak(None, file!(), line!(), column!())
+            .unwrap_or_else(|| $default)
+    };
+    ($value:literal; $default:expr) => {
+        inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
+            .unwrap_or_else(|| $default)
+    };
 }
 
 #[cfg(not(debug_assertions))]
-pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
-    default: T,
-    _file: &'static str,
-    _line: u32,
-    _column: u32,
-) -> T {
-    default
-}
-
 #[macro_export]
 macro_rules! tweak {
-    ($e: literal) => {
-        inline_tweak::inline_tweak($e, file!(), line!(), column!())
+    ($default:expr) => {
+        $default
+    };
+    ($value:literal; $default:expr) => {
+        $default
     };
 }
 
