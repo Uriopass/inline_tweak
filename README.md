@@ -1,16 +1,16 @@
-# Inline tweak
+# inline_tweak
 
 ![](https://i.imgur.com/DZrg910.gif)
 
 [![Crates.io](https://img.shields.io/crates/v/inline_tweak.svg)](https://crates.io/crates/inline_tweak)
 
-Inline tweaks is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
+**inline_tweak** is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
 by tuxedo labs.  
 
 Tweak any number literal directly from your code, changes to the source appear while running the program.  
 It works by parsing the file when a change occurs.  
 
-The library is minimal, only requiring the lazy_static dependency to hold modified values.  
+The library is minimal, only requiring the `lazy_static` dependency to hold modified values.  
 In release mode, the tweaking code is disabled and compiled away.  
 
 ## Usage
