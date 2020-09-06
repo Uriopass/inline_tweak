@@ -23,9 +23,9 @@ mod itweak {
 
     lazy_static! {
         static ref VALUES: Mutex<HashMap<(&'static str, u32, u32), TweakValue>> =
-            Mutex::new(HashMap::new());
-        static ref PARSED_FILES: Mutex<HashSet<&'static str>> = Mutex::new(HashSet::new());
-        static ref WATCHERS: Mutex<HashMap<&'static str, FileWatcher>> = Mutex::new(HashMap::new());
+            Default::default();
+        static ref PARSED_FILES: Mutex<HashSet<&'static str>> = Default::default();
+        static ref WATCHERS: Mutex<HashMap<&'static str, FileWatcher>> = Default::default();
     }
 
     fn last_modified(file: &'static str) -> Option<SystemTime> {
@@ -48,14 +48,14 @@ mod itweak {
                 .filter_map(|line| line.ok())
                 .enumerate()
             {
-                let mut column: u32 = 0;
-                for tweak in line.split("tweak!(") {
-                    if column == 0 {
-                        column = tweak.len() as u32;
-                        continue;
-                    }
+                for (column, _) in line.match_indices("tweak!(") {
+                    let path_corrected_column = line[..column]
+                        .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == ':' || c == '_')) // https://doc.rust-lang.org/reference/paths.html follows the rust path grammar
+                        .map(|x| x + 1)
+                        .unwrap_or(column);
+
                     values.insert(
-                        (file, line_n as u32 + 1, column + 1),
+                        (file, line_n as u32 + 1, path_corrected_column as u32 + 1),
                         TweakValue {
                             position: tweaks_seen,
                             value: None,
@@ -63,7 +63,6 @@ mod itweak {
                             file_modified,
                         },
                     );
-                    column += tweak.len() as u32 + 7;
                     tweaks_seen += 1;
                 }
             }
