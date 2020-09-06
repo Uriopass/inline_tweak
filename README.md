@@ -42,5 +42,5 @@ fn main() {
 Simply add this line to your Cargo.toml
 
 ```toml
-inline_tweak = "1.0.3"
+inline_tweak = "1.0.4"
 ```
