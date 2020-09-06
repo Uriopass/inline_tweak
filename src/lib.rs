@@ -52,7 +52,7 @@ mod itweak {
                     let path_corrected_column = line[..column]
                         .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == ':' || c == '_')) // https://doc.rust-lang.org/reference/paths.html follows the rust path grammar
                         .map(|x| x + 1)
-                        .unwrap_or(column);
+                        .unwrap_or(0);
 
                     values.insert(
                         (file, line_n as u32 + 1, path_corrected_column as u32 + 1),
