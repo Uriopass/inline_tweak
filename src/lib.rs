@@ -1,3 +1,43 @@
+//! Tweak any number literal directly from your code, changes to the source appear while running the program.
+//! It works by parsing the file when a change occurs.
+//!
+//! The library is minimal, only requiring the `lazy_static` dependency to hold modified values.
+//! In release mode, the tweaking code is disabled and compiled away.
+//!
+//! ## Usage
+//!
+//! ```rust
+//! loop {
+//!     // Try changing the value while the application is running
+//!     println!("{}", inline_tweak::tweak!(3.14));
+//! }
+//! ```
+//!
+//! ## Extra features
+//!
+//! #### watch!
+//!
+//! `inline_tweak` provides a `watch!()` macro that sleeps until the file is modified, akin to a breakpoint:
+//! ```rust
+//! loop {
+//!     println!("{}", inline_tweak::tweak!(3.14));
+//!     watch!(); // The thread will sleep here until anything in the file changes
+//! }
+//! ```
+//!
+//! #### Expressions
+//!
+//! `inline_tweak` allows to tweak expressions by providing a value later.
+//! For example:
+//! ```rust
+//! tweak!(rng.gen_range(0.0, 1.0))
+//! ```
+//!
+//! can then be replaced by a constant value by modifying the file (even while the application is running) to
+//! ```rust
+//! tweak!(5.0; rng.gen_range(0.0, 1.0)) // will always return 5.0
+//! ```
+
 #[cfg(debug_assertions)]
 mod itweak {
     use lazy_static::*;

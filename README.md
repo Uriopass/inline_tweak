@@ -25,7 +25,11 @@ fn main() {
 }
 ```
 
-`inline_tweak` also provides a `watch!()` macro that sleeps until the file is modified, akin to a breakpoint:
+## Extra features
+
+#### watch!
+
+`inline_tweak` provides a `watch!()` macro that sleeps until the file is modified, akin to a breakpoint:
 ```rust
 use inline_tweak::*;
 
@@ -36,6 +40,21 @@ fn main() {
     }
 }
 ```
+
+#### Expressions
+
+`inline_tweak` allows to tweak expressions by providing a value later.
+For example:
+```rust
+tweak!(rng.gen_range(0.0, 1.0))
+``` 
+
+can then be replaced by a constant value by modifying the file (even while the application is running) to
+```rust
+tweak!(5.0; rng.gen_range(0.0, 1.0)) // will always return 5.0
+```
+
+[See the "expression" example in action](https://i.imgur.com/pSvLNlI.mp4)
 
 ## Installation
 

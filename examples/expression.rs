@@ -13,6 +13,6 @@ fn main() {
     loop {
         // Try removing or changing the value while the application is running
         println!("{}", tweak!(100; counter()));
-        std::thread::sleep(Duration::from_millis(500));
+        std::thread::sleep(Duration::from_millis(1000));
     }
 }
