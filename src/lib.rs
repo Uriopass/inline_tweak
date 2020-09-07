@@ -178,7 +178,11 @@ mod itweak {
             tweak.initialized = true;
         }
 
-        if Instant::now().duration_since(tweak.last_checked).as_secs_f32() > 0.5 {
+        if Instant::now()
+            .duration_since(tweak.last_checked)
+            .as_secs_f32()
+            > 0.5
+        {
             update_tweak::<T>(&mut tweak, file)?;
         }
 
@@ -223,8 +227,7 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
 #[macro_export]
 macro_rules! tweak {
     ($default:expr) => {
-        inline_tweak::inline_tweak(None, file!(), line!(), column!())
-            .unwrap_or_else(|| $default)
+        inline_tweak::inline_tweak(None, file!(), line!(), column!()).unwrap_or_else(|| $default)
     };
     ($value:literal; $default:expr) => {
         inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
