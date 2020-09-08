@@ -61,5 +61,5 @@ tweak!(5.0; rng.gen_range(0.0, 1.0)) // will always return 5.0
 Simply add this line to your Cargo.toml
 
 ```toml
-inline_tweak = "1.0.5"
+inline_tweak = "1.0.6"
 ```
