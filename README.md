@@ -7,7 +7,7 @@
 **inline_tweak** is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
 by tuxedo labs.  
 
-Tweak any number literal directly from your code, changes to the source appear while running the program.  
+Tweak any number literal (or boolean) directly from your code, changes to the source appear while running the program.  
 It works by parsing the file when a change occurs.  
 
 The library is minimal, only requiring the `lazy_static` dependency to hold modified values.  
@@ -55,6 +55,8 @@ tweak!(5.0; rng.gen_range(0.0, 1.0)) // will always return 5.0
 ```
 
 [See the "expression" example in action](https://i.imgur.com/pSvLNlI.mp4)
+
+Note that this works only for expressions that return a tweakable type. (number/boolean literals)
 
 ## Installation
 
