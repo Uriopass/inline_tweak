@@ -58,6 +58,11 @@ tweak!(5.0; rng.gen_range(0.0, 1.0)) // will always return 5.0
 
 Note that this works only for expressions that return a tweakable type. (number/boolean literals)
 
+#### release_tweak!
+
+The `release_tweak!` macro acts exactly like `tweak!` except that it also works in release mode.  
+It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.  
+
 ## Installation
 
 Simply add this line to your Cargo.toml

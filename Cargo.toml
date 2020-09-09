@@ -12,3 +12,11 @@ repository = "https://github.com/Uriopass/inline_tweak"
 
 [dependencies]
 lazy_static = "1.4.0"
+
+[features]
+default = []
+release_tweak = []
+
+[[example]]
+name = "release"
+required-features = ["release_tweak"]

@@ -37,8 +37,13 @@
 //! ```rust
 //! tweak!(5.0; rng.gen_range(0.0, 1.0)) // will always return 5.0
 //! ```
+//!
+//! #### release_tweak!
+//!
+//! The `release_tweak!` macro acts exactly like `tweak!` except that it also works in release mode.
+//! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature="release_tweak"))]
 mod itweak {
     use lazy_static::*;
     use std::any::Any;
@@ -213,7 +218,7 @@ mod itweak {
     }
 }
 
-#[cfg(debug_assertions)]
+#[cfg(any(debug_assertions, feature="release_tweak"))]
 pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     initial_value: Option<T>,
     file: &'static str,
@@ -221,6 +226,18 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     column: u32,
 ) -> Option<T> {
     itweak::get_value(initial_value, file, line, column)
+}
+
+#[cfg(feature="release_tweak")]
+#[macro_export]
+macro_rules! release_tweak {
+    ($default:expr) => {
+        inline_tweak::inline_tweak(None, file!(), line!(), column!()).unwrap_or_else(|| $default)
+    };
+    ($value:literal; $default:expr) => {
+        inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
+            .unwrap_or_else(|| $default)
+    };
 }
 
 #[cfg(debug_assertions)]
