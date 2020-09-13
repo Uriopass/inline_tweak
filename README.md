@@ -7,7 +7,7 @@
 **inline_tweak** is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
 by tuxedo labs.  
 
-Tweak any number literal (or boolean) directly from your code, changes to the source appear while running the program.  
+Tweak any literal directly from your code, changes to the source appear while running the program.  
 It works by parsing the file when a change occurs.  
 
 The library is minimal, only requiring the `lazy_static` dependency to hold modified values.  
@@ -35,7 +35,7 @@ use inline_tweak::*;
 
 fn main() {
     loop {
-        println!("{}", tweak!(3.14));
+        println!("{}", tweak!("hello world"));
         watch!(); // The thread will sleep here until anything in the file changes
     }
 }
@@ -68,5 +68,5 @@ It is accessible behind the feature flag `"release_tweak"` which is not enabled 
 Simply add this line to your Cargo.toml
 
 ```toml
-inline_tweak = "1.0.6"
+inline_tweak = "1.0.7"
 ```

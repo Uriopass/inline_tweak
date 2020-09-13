@@ -2,7 +2,7 @@
 # It is not intended for manual editing.
 [[package]]
 name = "inline_tweak"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "lazy_static",
 ]

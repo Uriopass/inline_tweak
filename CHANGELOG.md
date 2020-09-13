@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7]
+ - add release_tweak! macro and feature
+ - support text literals
+
 ## [1.0.6]
  - Support expressions by providing a constant value if desired
 
