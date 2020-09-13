@@ -44,15 +44,41 @@
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 
 #[cfg(any(debug_assertions, feature = "release_tweak"))]
+pub use crate::itweak::Tweakable;
+
+#[cfg(any(debug_assertions, feature = "release_tweak"))]
 mod itweak {
     use lazy_static::*;
     use std::any::Any;
     use std::collections::{HashMap, HashSet};
     use std::fs::File;
     use std::io::{BufRead, BufReader};
-    use std::str::FromStr;
     use std::sync::Mutex;
     use std::time::{Instant, SystemTime};
+
+    pub trait Tweakable: Sized {
+        fn parse(x: &str) -> Option<Self>;
+    }
+
+    macro_rules! impl_tweakable {
+        ($($t: ty) +) => {
+            $(
+            impl Tweakable for $t {
+                fn parse(x: &str) -> Option<$t> {
+                    x.parse().ok()
+                }
+            }
+            )+
+        };
+    }
+
+    impl_tweakable!(u8 u16 u32 u64 u128 i8 i16 i32 i64 i128 usize isize bool f32 f64);
+
+    impl Tweakable for &'static str {
+        fn parse(x: &str) -> Option<Self> {
+            Some(Box::leak(Box::new(String::from(&x[1..x.len()-1]))))
+        }
+    }
 
     struct TweakValue {
         position: usize,
@@ -120,7 +146,7 @@ mod itweak {
         Some(())
     }
 
-    fn update_tweak<T: 'static + FromStr + Clone + Send>(
+    fn update_tweak<T: 'static + Tweakable + Clone + Send>(
         tweak: &mut TweakValue,
         file: &'static str,
     ) -> Option<()> {
@@ -158,7 +184,7 @@ mod itweak {
                 false
             })?;
 
-            let parsed: Option<T> = FromStr::from_str(&val_str[..end]).ok();
+            let parsed: Option<T> = Tweakable::parse(&val_str[..end]);
             tweak.file_modified = last_modified;
             tweak.last_checked = Instant::now();
             tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
@@ -167,12 +193,13 @@ mod itweak {
         Some(())
     }
 
-    pub(crate) fn get_value<T: 'static + FromStr + Clone + Send>(
+    pub(crate) fn get_value<T: 'static + Tweakable + Clone + Send>(
         initial_value: Option<T>,
         file: &'static str,
         line: u32,
         column: u32,
     ) -> Option<T> {
+
         parse_tweaks(file);
 
         let mut lock = VALUES.lock().unwrap();
@@ -215,7 +242,7 @@ mod itweak {
 }
 
 #[cfg(any(debug_assertions, feature = "release_tweak"))]
-pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
+pub fn inline_tweak<T: 'static + Tweakable + Clone + Send>(
     initial_value: Option<T>,
     file: &'static str,
     line: u32,
