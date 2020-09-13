@@ -76,7 +76,7 @@ mod itweak {
 
     impl Tweakable for &'static str {
         fn parse(x: &str) -> Option<Self> {
-            Some(Box::leak(Box::new(String::from(&x[1..x.len()-1]))))
+            Some(Box::leak(Box::new(String::from(&x[1..x.len() - 1]))))
         }
     }
 
@@ -199,7 +199,6 @@ mod itweak {
         line: u32,
         column: u32,
     ) -> Option<T> {
-
         parse_tweaks(file);
 
         let mut lock = VALUES.lock().unwrap();
