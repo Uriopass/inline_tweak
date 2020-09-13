@@ -43,7 +43,7 @@
 //! The `release_tweak!` macro acts exactly like `tweak!` except that it also works in release mode.
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 
-#[cfg(any(debug_assertions, feature="release_tweak"))]
+#[cfg(any(debug_assertions, feature = "release_tweak"))]
 mod itweak {
     use lazy_static::*;
     use std::any::Any;
@@ -183,11 +183,7 @@ mod itweak {
             tweak.initialized = true;
         }
 
-        if Instant::now()
-            .duration_since(tweak.last_checked)
-            .as_secs_f32()
-            > 0.5
-        {
+        if tweak.last_checked.elapsed().as_secs_f32() > 0.5 {
             update_tweak::<T>(&mut tweak, file)?;
         }
 
@@ -218,7 +214,7 @@ mod itweak {
     }
 }
 
-#[cfg(any(debug_assertions, feature="release_tweak"))]
+#[cfg(any(debug_assertions, feature = "release_tweak"))]
 pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     initial_value: Option<T>,
     file: &'static str,
@@ -228,7 +224,7 @@ pub fn inline_tweak<T: 'static + std::str::FromStr + Clone + Send>(
     itweak::get_value(initial_value, file, line, column)
 }
 
-#[cfg(feature="release_tweak")]
+#[cfg(feature = "release_tweak")]
 #[macro_export]
 macro_rules! release_tweak {
     ($default:expr) => {
