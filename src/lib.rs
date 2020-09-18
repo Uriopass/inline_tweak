@@ -43,8 +43,9 @@
 //! The `release_tweak!` macro acts exactly like `tweak!` except that it also works in release mode.
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 
-#[cfg(any(debug_assertions, feature = "release_tweak"))]
-pub use crate::itweak::Tweakable;
+pub trait Tweakable: Sized {
+    fn parse(x: &str) -> Option<Self>;
+}
 
 #[cfg(any(debug_assertions, feature = "release_tweak"))]
 mod itweak {
@@ -55,10 +56,7 @@ mod itweak {
     use std::io::{BufRead, BufReader};
     use std::sync::Mutex;
     use std::time::{Instant, SystemTime};
-
-    pub trait Tweakable: Sized {
-        fn parse(x: &str) -> Option<Self>;
-    }
+    use super::Tweakable;
 
     macro_rules! impl_tweakable {
         ($($t: ty) +) => {
