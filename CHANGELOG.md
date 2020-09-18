@@ -2,9 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8]
+ - Support non ascii text literals
+ - Allow implementing custom Tweakable types
+
 ## [1.0.7]
- - add release_tweak! macro and feature
- - support text literals
+ - Add release_tweak! macro and feature
+ - Support text literals
 
 ## [1.0.6]
  - Support expressions by providing a constant value if desired

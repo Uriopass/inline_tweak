@@ -1,4 +1,4 @@
-//! Tweak any number literal directly from your code, changes to the source appear while running the program.
+//! Tweak any literal directly from your code, changes to the source appear while running the program.
 //! It works by parsing the file when a change occurs.
 //!
 //! The library is minimal, only requiring the `lazy_static` dependency to hold modified values.
