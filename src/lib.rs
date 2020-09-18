@@ -76,7 +76,7 @@ mod itweak {
 
     impl Tweakable for &'static str {
         fn parse(x: &str) -> Option<Self> {
-            Some(Box::leak(Box::new(String::from(&x[1..x.len() - 1]))))
+            Some(Box::leak(Box::new(String::from(x.trim_start_matches('"').trim_end_matches('"')))))
         }
     }
 
@@ -172,7 +172,7 @@ mod itweak {
 
             // Find end of tweak
             let mut prec = 1;
-            let end = val_str.chars().position(|c| {
+            let (end, _) = val_str.char_indices().find(|(_,c)| {
                 match c {
                     ';' | ')' if prec == 1 => {
                         return true;
