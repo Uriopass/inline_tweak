@@ -49,6 +49,7 @@ pub trait Tweakable: Sized {
 
 #[cfg(any(debug_assertions, feature = "release_tweak"))]
 mod itweak {
+    use super::Tweakable;
     use lazy_static::*;
     use std::any::Any;
     use std::collections::{HashMap, HashSet};
@@ -56,7 +57,6 @@ mod itweak {
     use std::io::{BufRead, BufReader};
     use std::sync::Mutex;
     use std::time::{Instant, SystemTime};
-    use super::Tweakable;
 
     macro_rules! impl_tweakable {
         ($($t: ty) +) => {
@@ -74,7 +74,9 @@ mod itweak {
 
     impl Tweakable for &'static str {
         fn parse(x: &str) -> Option<Self> {
-            Some(Box::leak(Box::new(String::from(x.trim_start_matches('"').trim_end_matches('"')))))
+            Some(Box::leak(Box::new(String::from(
+                x.trim_start_matches('"').trim_end_matches('"'),
+            ))))
         }
     }
 
@@ -104,6 +106,7 @@ mod itweak {
 
     // Assume that the first time a tweak! is called, all tweak!s will be in original position.
     fn parse_tweaks(file: &'static str) -> Option<()> {
+        puffin::profile_function!();
         let mut fileinfos = PARSED_FILES.lock().unwrap();
 
         if !fileinfos.contains(&file) {
@@ -148,6 +151,7 @@ mod itweak {
         tweak: &mut TweakValue,
         file: &'static str,
     ) -> Option<()> {
+        puffin::profile_function!();
         let last_modified = last_modified(file)?;
         if tweak.value.is_none()
             || last_modified
@@ -170,7 +174,7 @@ mod itweak {
 
             // Find end of tweak
             let mut prec = 1;
-            let (end, _) = val_str.char_indices().find(|(_,c)| {
+            let (end, _) = val_str.char_indices().find(|(_, c)| {
                 match c {
                     ';' | ')' if prec == 1 => {
                         return true;
@@ -197,6 +201,7 @@ mod itweak {
         line: u32,
         column: u32,
     ) -> Option<T> {
+        puffin::profile_function!();
         parse_tweaks(file);
 
         let mut lock = VALUES.lock().unwrap();
