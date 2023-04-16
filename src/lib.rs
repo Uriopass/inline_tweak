@@ -110,7 +110,7 @@ mod itweak {
         let mut fileinfos = PARSED_FILES.lock().unwrap();
 
         if !fileinfos.contains(file) {
-            puffin::profile_scope!("Add file info");
+            puffin::profile_scope!("itweak:Add file info");
             fileinfos.insert(file);
             let mut values = VALUES.lock().unwrap();
 
@@ -152,14 +152,9 @@ mod itweak {
         file: &'static str,
     ) -> Option<()> {
         puffin::profile_function!();
+        tweak.last_checked = Instant::now();
         let last_modified = last_modified(file)?;
-        if tweak.value.is_none()
-            || last_modified
-                .duration_since(tweak.file_modified)
-                .ok()?
-                .as_secs_f32()
-                > 0.5
-        {
+        if tweak.value.is_none() || last_modified != tweak.file_modified {
             let mut tweaks_seen = 0;
             let line_str = BufReader::new(File::open(file).ok()?)
                 .lines()
@@ -188,7 +183,6 @@ mod itweak {
 
             let parsed: Option<T> = Tweakable::parse(&val_str[..end]);
             tweak.file_modified = last_modified;
-            tweak.last_checked = Instant::now();
             tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
         }
 
@@ -209,6 +203,7 @@ mod itweak {
         let mut tweak = lock.get_mut(&(file, line, column))?;
 
         if !tweak.initialized {
+            puffin::profile_scope!("itweak:Initialize tweak");
             tweak.value = initial_value.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
             tweak.initialized = true;
         }
@@ -221,6 +216,7 @@ mod itweak {
     }
 
     pub fn watch_modified(file: &'static str) -> bool {
+        puffin::profile_function!();
         let mut lock = WATCHERS.lock().unwrap();
         let entry = lock.entry(file);
 
