@@ -109,7 +109,9 @@ mod itweak {
         puffin::profile_function!();
         let mut fileinfos = PARSED_FILES.lock().unwrap();
 
-        if !fileinfos.contains(&file) {
+        if !fileinfos.contains(file) {
+            puffin::profile_scope!("Add file info");
+            fileinfos.insert(file);
             let mut values = VALUES.lock().unwrap();
 
             let file_modified = last_modified(file).unwrap_or_else(SystemTime::now);
@@ -140,8 +142,6 @@ mod itweak {
                     tweaks_seen += 1;
                 }
             }
-
-            fileinfos.insert(file);
         }
 
         Some(())
@@ -203,6 +203,7 @@ mod itweak {
     ) -> Option<T> {
         puffin::profile_function!();
         parse_tweaks(file);
+        // assert!(PARSED_FILES.lock().unwrap().contains(file));
 
         let mut lock = VALUES.lock().unwrap();
         let mut tweak = lock.get_mut(&(file, line, column))?;
@@ -213,7 +214,7 @@ mod itweak {
         }
 
         if tweak.last_checked.elapsed().as_secs_f32() > 0.5 {
-            update_tweak::<T>(&mut tweak, file)?;
+            update_tweak::<T>(tweak, file)?;
         }
 
         tweak.value.as_ref()?.downcast_ref().cloned()
