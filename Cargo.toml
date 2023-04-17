@@ -1,11 +1,11 @@
 [package]
 name = "inline_tweak"
-version = "1.0.8"
+version = "1.0.9"
 authors = ["Paris DOUADY <paris.douady@hotmail.fr>"]
 edition = "2018"
 keywords = ["gamedev", "tweak", "inline", "config", "tool"]
 description = "Tweak values directly from the source code"
-license = "CC0"
+license = "CC0-1.0"
 readme = "README.md"
 categories = [
     "config",

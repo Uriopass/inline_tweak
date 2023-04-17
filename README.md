@@ -68,5 +68,5 @@ It is accessible behind the feature flag `"release_tweak"` which is not enabled 
 Simply add this line to your Cargo.toml
 
 ```toml
-inline_tweak = "1.0.8"
+inline_tweak = "1.0.9"
 ```
