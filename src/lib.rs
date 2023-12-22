@@ -106,43 +106,48 @@ mod itweak {
 
     // Assume that the first time a tweak! is called, all tweak!s will be in original position.
     fn parse_tweaks(file: &'static str) -> Option<()> {
-        let mut fileinfos = PARSED_FILES.lock().unwrap();
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let mut fileinfos = PARSED_FILES.lock().unwrap();
 
-        if !fileinfos.contains(file) {
-            fileinfos.insert(file);
-            let mut values = VALUES.lock().unwrap();
+            if !fileinfos.contains(file) {
+                fileinfos.insert(file);
+                let mut values = VALUES.lock().unwrap();
 
-            let file_modified = last_modified(file).unwrap_or_else(SystemTime::now);
-            let now = Instant::now();
+                let file_modified = last_modified(file).unwrap_or_else(SystemTime::now);
+                let now = Instant::now();
 
-            let mut tweaks_seen = 0;
-            for (line_n, line) in BufReader::new(File::open(file).ok()?)
-                .lines()
-                .filter_map(|line| line.ok())
-                .enumerate()
-            {
-                for (column, _) in line.match_indices("tweak!(") {
-                    let path_corrected_column = line[..column]
-                        .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == ':' || c == '_')) // https://doc.rust-lang.org/reference/paths.html follows the rust path grammar
-                        .map(|x| x + 1)
-                        .unwrap_or(0);
+                let mut tweaks_seen = 0;
+                for (line_n, line) in BufReader::new(File::open(file).ok()?)
+                    .lines()
+                    .filter_map(|line| line.ok())
+                    .enumerate()
+                {
+                    for (column, _) in line.match_indices("tweak!(") {
+                        let path_corrected_column = line[..column]
+                            .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == ':' || c == '_')) // https://doc.rust-lang.org/reference/paths.html follows the rust path grammar
+                            .map(|x| x + 1)
+                            .unwrap_or(0);
 
-                    values.insert(
-                        (file, line_n as u32 + 1, path_corrected_column as u32 + 1),
-                        TweakValue {
-                            position: tweaks_seen,
-                            value: None,
-                            initialized: false,
-                            last_checked: now,
-                            file_modified,
-                        },
-                    );
-                    tweaks_seen += 1;
+                        values.insert(
+                            (file, line_n as u32 + 1, path_corrected_column as u32 + 1),
+                            TweakValue {
+                                position: tweaks_seen,
+                                value: None,
+                                initialized: false,
+                                last_checked: now,
+                                file_modified,
+                            },
+                        );
+                        tweaks_seen += 1;
+                    }
                 }
             }
+
+            return Some(())
         }
 
-        Some(())
+        None
     }
 
     fn update_tweak<T: 'static + Tweakable + Clone + Send>(
@@ -195,7 +200,7 @@ mod itweak {
         parse_tweaks(file);
 
         let mut lock = VALUES.lock().unwrap();
-        let mut tweak = lock.get_mut(&(file, line, column))?;
+        let tweak = lock.get_mut(&(file, line, column))?;
 
         if !tweak.initialized {
             tweak.value = initial_value.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
