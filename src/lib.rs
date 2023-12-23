@@ -118,7 +118,7 @@ mod itweak {
             let mut tweaks_seen = 0;
             for (line_n, line) in BufReader::new(File::open(file).ok()?)
                 .lines()
-                .filter_map(|line| line.ok())
+                .map_while(Result::ok)
                 .enumerate()
             {
                 for (column, _) in line.match_indices("tweak!(") {
@@ -155,7 +155,7 @@ mod itweak {
             let mut tweaks_seen = 0;
             let line_str = BufReader::new(File::open(file).ok()?)
                 .lines()
-                .filter_map(|line| line.ok())
+                .map_while(Result::ok)
                 .find(|line| {
                     tweaks_seen += line.matches("tweak!(").count();
                     tweaks_seen > tweak.position
@@ -195,7 +195,7 @@ mod itweak {
         parse_tweaks(file);
 
         let mut lock = VALUES.lock().unwrap();
-        let mut tweak = lock.get_mut(&(file, line, column))?;
+        let tweak = lock.get_mut(&(file, line, column))?;
 
         if !tweak.initialized {
             tweak.value = initial_value.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
@@ -243,7 +243,7 @@ pub fn inline_tweak<T: 'static + Tweakable + Clone + Send>(
     itweak::get_value(initial_value, file, line, column)
 }
 
-#[cfg(all(feature = "release_tweak"), not(target_arch="wasm32"))]
+#[cfg(all(feature = "release_tweak", not(target_arch = "wasm32")))]
 #[macro_export]
 macro_rules! release_tweak {
     ($default:expr) => {
@@ -255,7 +255,7 @@ macro_rules! release_tweak {
     };
 }
 
-#[cfg(all(feature = "release_tweak"), target_arch="wasm32")]
+#[cfg(any(feature = "release_tweak", target_arch = "wasm32"))]
 #[macro_export]
 macro_rules! release_tweak {
     ($default:expr) => {
@@ -289,17 +289,6 @@ macro_rules! tweak {
     };
 }
 
-#[cfg(not(debug_assertions))]
-#[macro_export]
-macro_rules! tweak {
-    ($default:expr) => {
-        $default
-    };
-    ($value:literal; $default:expr) => {
-        $default
-    };
-}
-
 #[cfg(debug_assertions)]
 pub fn watch_file(file: &'static str) {
     while !itweak::watch_modified(file) {
@@ -321,7 +310,5 @@ macro_rules! watch {
 #[macro_export]
 #[cfg(target_arch = "wasm32")]
 macro_rules! watch {
-    () => {
-        $default
-    };
+    () => {};
 }
