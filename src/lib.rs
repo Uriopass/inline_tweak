@@ -243,7 +243,7 @@ pub fn inline_tweak<T: 'static + Tweakable + Clone + Send>(
     itweak::get_value(initial_value, file, line, column)
 }
 
-#[cfg(feature = "release_tweak")]
+#[cfg(all(feature = "release_tweak"), not(target_arch="wasm32"))]
 #[macro_export]
 macro_rules! release_tweak {
     ($default:expr) => {
@@ -255,7 +255,18 @@ macro_rules! release_tweak {
     };
 }
 
-#[cfg(debug_assertions)]
+#[cfg(all(feature = "release_tweak"), target_arch="wasm32")]
+#[macro_export]
+macro_rules! release_tweak {
+    ($default:expr) => {
+        $default
+    };
+    ($value:literal; $default:expr) => {
+        $default
+    };
+}
+
+#[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
 #[macro_export]
 macro_rules! tweak {
     ($default:expr) => {
@@ -264,6 +275,17 @@ macro_rules! tweak {
     ($value:literal; $default:expr) => {
         inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
             .unwrap_or_else(|| $default)
+    };
+}
+
+#[cfg(any(not(debug_assertions), target_arch = "wasm32"))]
+#[macro_export]
+macro_rules! tweak {
+    ($default:expr) => {
+        $default
+    };
+    ($value:literal; $default:expr) => {
+        $default
     };
 }
 
@@ -289,8 +311,17 @@ pub fn watch_file(file: &'static str) {
 pub fn watch_file(_file: &'static str) {}
 
 #[macro_export]
+#[cfg(not(target_arch = "wasm32"))]
 macro_rules! watch {
     () => {
         inline_tweak::watch_file(file!());
+    };
+}
+
+#[macro_export]
+#[cfg(target_arch = "wasm32")]
+macro_rules! watch {
+    () => {
+        $default
     };
 }
