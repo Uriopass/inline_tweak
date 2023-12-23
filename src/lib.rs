@@ -106,48 +106,43 @@ mod itweak {
 
     // Assume that the first time a tweak! is called, all tweak!s will be in original position.
     fn parse_tweaks(file: &'static str) -> Option<()> {
-        #[cfg(not(target_arch = "wasm32"))]
-        {
-            let mut fileinfos = PARSED_FILES.lock().unwrap();
+        let mut fileinfos = PARSED_FILES.lock().unwrap();
 
-            if !fileinfos.contains(file) {
-                fileinfos.insert(file);
-                let mut values = VALUES.lock().unwrap();
+        if !fileinfos.contains(file) {
+            fileinfos.insert(file);
+            let mut values = VALUES.lock().unwrap();
 
-                let file_modified = last_modified(file).unwrap_or_else(SystemTime::now);
-                let now = Instant::now();
+            let file_modified = last_modified(file).unwrap_or_else(SystemTime::now);
+            let now = Instant::now();
 
-                let mut tweaks_seen = 0;
-                for (line_n, line) in BufReader::new(File::open(file).ok()?)
-                    .lines()
-                    .filter_map(|line| line.ok())
-                    .enumerate()
-                {
-                    for (column, _) in line.match_indices("tweak!(") {
-                        let path_corrected_column = line[..column]
-                            .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == ':' || c == '_')) // https://doc.rust-lang.org/reference/paths.html follows the rust path grammar
-                            .map(|x| x + 1)
-                            .unwrap_or(0);
+            let mut tweaks_seen = 0;
+            for (line_n, line) in BufReader::new(File::open(file).ok()?)
+                .lines()
+                .filter_map(|line| line.ok())
+                .enumerate()
+            {
+                for (column, _) in line.match_indices("tweak!(") {
+                    let path_corrected_column = line[..column]
+                        .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == ':' || c == '_')) // https://doc.rust-lang.org/reference/paths.html follows the rust path grammar
+                        .map(|x| x + 1)
+                        .unwrap_or(0);
 
-                        values.insert(
-                            (file, line_n as u32 + 1, path_corrected_column as u32 + 1),
-                            TweakValue {
-                                position: tweaks_seen,
-                                value: None,
-                                initialized: false,
-                                last_checked: now,
-                                file_modified,
-                            },
-                        );
-                        tweaks_seen += 1;
-                    }
+                    values.insert(
+                        (file, line_n as u32 + 1, path_corrected_column as u32 + 1),
+                        TweakValue {
+                            position: tweaks_seen,
+                            value: None,
+                            initialized: false,
+                            last_checked: now,
+                            file_modified,
+                        },
+                    );
+                    tweaks_seen += 1;
                 }
             }
-
-            return Some(())
         }
 
-        None
+        Some(())
     }
 
     fn update_tweak<T: 'static + Tweakable + Clone + Send>(
@@ -200,7 +195,7 @@ mod itweak {
         parse_tweaks(file);
 
         let mut lock = VALUES.lock().unwrap();
-        let tweak = lock.get_mut(&(file, line, column))?;
+        let mut tweak = lock.get_mut(&(file, line, column))?;
 
         if !tweak.initialized {
             tweak.value = initial_value.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
@@ -248,7 +243,7 @@ pub fn inline_tweak<T: 'static + Tweakable + Clone + Send>(
     itweak::get_value(initial_value, file, line, column)
 }
 
-#[cfg(feature = "release_tweak")]
+#[cfg(all(feature = "release_tweak"), not(target_arch="wasm32"))]
 #[macro_export]
 macro_rules! release_tweak {
     ($default:expr) => {
@@ -260,7 +255,18 @@ macro_rules! release_tweak {
     };
 }
 
-#[cfg(debug_assertions)]
+#[cfg(all(feature = "release_tweak"), target_arch="wasm32")]
+#[macro_export]
+macro_rules! release_tweak {
+    ($default:expr) => {
+        $default
+    };
+    ($value:literal; $default:expr) => {
+        $default
+    };
+}
+
+#[cfg(all(debug_assertions, not(target_arch = "wasm32")))]
 #[macro_export]
 macro_rules! tweak {
     ($default:expr) => {
@@ -269,6 +275,17 @@ macro_rules! tweak {
     ($value:literal; $default:expr) => {
         inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
             .unwrap_or_else(|| $default)
+    };
+}
+
+#[cfg(any(not(debug_assertions), target_arch = "wasm32"))]
+#[macro_export]
+macro_rules! tweak {
+    ($default:expr) => {
+        $default
+    };
+    ($value:literal; $default:expr) => {
+        $default
     };
 }
 
@@ -294,8 +311,17 @@ pub fn watch_file(file: &'static str) {
 pub fn watch_file(_file: &'static str) {}
 
 #[macro_export]
+#[cfg(not(target_arch = "wasm32"))]
 macro_rules! watch {
     () => {
         inline_tweak::watch_file(file!());
+    };
+}
+
+#[macro_export]
+#[cfg(target_arch = "wasm32")]
+macro_rules! watch {
+    () => {
+        $default
     };
 }

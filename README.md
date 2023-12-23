@@ -11,7 +11,9 @@ Tweak any literal directly from your code, changes to the source appear while ru
 It works by parsing the file when a change occurs.  
 
 The library is minimal, only requiring the `lazy_static` dependency to hold modified values.  
-In release mode, the tweaking code is disabled and compiled away.  
+In release mode, the tweaking code is disabled and compiled away.
+
+When targeting `Web/wasm32` all macros will compile but run a no-op, so reloading is not supported for this platform at the moment. 
 
 ## Usage
 
@@ -68,5 +70,5 @@ It is accessible behind the feature flag `"release_tweak"` which is not enabled 
 Simply add this line to your Cargo.toml
 
 ```toml
-inline_tweak = "1.0.9"
+inline_tweak = "1.0.10"
 ```
