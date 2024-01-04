@@ -2,9 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.11]
+
+ - Fix release_tweak! feature was broken
+
 ## [1.0.10]
 
-- Add explicit `wasm32` compile conditions to avoid runtime panics
+ - Add explicit `wasm32` compile conditions to avoid runtime panics
 
 ## [1.0.9]
 
