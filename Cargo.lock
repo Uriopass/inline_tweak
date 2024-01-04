@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "inline_tweak"
-version = "1.0.10"
+version = "1.0.11"
 dependencies = [
  "lazy_static",
 ]
