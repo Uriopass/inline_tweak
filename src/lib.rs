@@ -255,7 +255,7 @@ macro_rules! release_tweak {
     };
 }
 
-#[cfg(any(feature = "release_tweak", target_arch = "wasm32"))]
+#[cfg(any(not(feature = "release_tweak"), target_arch = "wasm32"))]
 #[macro_export]
 macro_rules! release_tweak {
     ($default:expr) => {
