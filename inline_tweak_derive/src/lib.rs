@@ -108,7 +108,7 @@ impl VisitMut for LiteralReplacer {
                         delimiter: MacroDelimiter::Paren(Default::default()),
                         tokens: [
                             lit.lit,
-                            Lit::Str(LitStr::new(&*self.fname.to_string(), Span::call_site())),
+                            Lit::Str(LitStr::new(&self.fname.to_string(), Span::call_site())),
                             Lit::Int(LitInt::new(&self.nth.to_string(), Span::call_site())),
                         ]
                         .into_iter()

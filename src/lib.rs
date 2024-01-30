@@ -58,6 +58,7 @@
 //!
 //! The `release_tweak!` macro acts exactly like `tweak!` except that it also works in release mode.
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
+#![allow(clippy::needless_doctest_main)]
 
 pub trait Tweakable: Sized + Send + Clone + 'static {
     fn parse(x: &str) -> Option<Self>;
