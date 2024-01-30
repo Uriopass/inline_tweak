@@ -2,7 +2,7 @@
 name = "inline_tweak"
 version = "1.0.11"
 authors = ["Paris DOUADY <paris.douady@hotmail.fr>"]
-edition = "2018"
+edition = "2021"
 keywords = ["gamedev", "tweak", "inline", "config", "tool"]
 description = "Tweak values directly from the source code"
 license = "CC0-1.0"
@@ -17,11 +17,26 @@ repository = "https://github.com/Uriopass/inline_tweak"
 
 [dependencies]
 lazy_static = "1.4.0"
+rustc-hash = "1.1.0"
+
+# Derive
+inline_tweak_derive = { path = "inline_tweak_derive", optional = true }
+syn = { version = "2.0", optional = true, default-features = false, features = ["parsing", "full", "visit"]}
+proc-macro2 = { version = "1.0", optional = true, default-features = false, features = ["span-locations"]}
 
 [features]
 default = []
-release_tweak = []
+release_tweak = ["inline_tweak_derive/release_tweak"]
+derive = ["dep:syn", "dep:proc-macro2", "dep:inline_tweak_derive"]
 
 [[example]]
 name = "release"
 required-features = ["release_tweak"]
+
+[[example]]
+name = "derive"
+required-features = ["derive"]
+
+[[example]]
+name = "derive_release"
+required-features = ["derive", "release_tweak"]

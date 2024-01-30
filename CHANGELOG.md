@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.12]
+
+ - Introduce `derive` feature to allow `#[tweak_fn]` on functions.
+ - All calls to tweak are now almost always at most one hashmap lookup.
+ - Cache `stat` syscalls.
+ - Only read file from disk once per file change instead of per tweak in that file.
+
+These optimizations heavily reduce the overhead of using tweak!  
+This allows the proc-macro adding tweaks to all literals of not being too heavy.
+
 ## [1.0.11]
 
  - Fix release_tweak! feature was broken
