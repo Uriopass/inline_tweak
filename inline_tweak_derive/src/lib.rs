@@ -9,58 +9,6 @@ use syn::{
     Path, PathSegment, Token,
 };
 
-/*
-fn find_and_replace_attributes(
-    nth: &mut u32,
-    fname: &Literal,
-    input: proc_macro::token_stream::IntoIter,
-) -> TokenStream {
-    TokenStream::from_iter(input.into_iter().map(|inp| match inp {
-        TokenTree::Literal(lit) => {
-            let lit_v = lit.to_string();
-
-            // Authorize numbers, booleans, and chars
-            if !(lit_v.chars().all(|c| match c {
-                '0'..='9' | '.' | 'e' | 'E' | '-' | '+' | '_' => true,
-                _ => false,
-            }) || lit_v == "true"
-                || lit_v == "false"
-                || lit_v.starts_with('\''))
-            {
-                return TokenTree::Literal(lit);
-            }
-
-            let g = TokenTree::Group(Group::new(
-                Delimiter::None,
-                TokenStream::from_iter([
-                    TokenTree::Ident(Ident::new("inline_tweak", Span::call_site())),
-                    TokenTree::Punct(Punct::new(':', proc_macro::Spacing::Joint)),
-                    TokenTree::Punct(Punct::new(':', proc_macro::Spacing::Alone)),
-                    TokenTree::Ident(Ident::new("derive_tweak", Span::call_site())),
-                    TokenTree::Punct(Punct::new('!', proc_macro::Spacing::Alone)),
-                    TokenTree::Group(Group::new(
-                        Delimiter::Parenthesis,
-                        TokenStream::from_iter([
-                            TokenTree::Literal(lit),
-                            TokenTree::Punct(Punct::new(',', proc_macro::Spacing::Alone)),
-                            TokenTree::Literal(Literal::clone(fname)),
-                            TokenTree::Punct(Punct::new(',', proc_macro::Spacing::Alone)),
-                            TokenTree::Literal(Literal::u32_suffixed(*nth)),
-                        ]),
-                    )),
-                ]),
-            ));
-            *nth += 1;
-            g
-        }
-        TokenTree::Group(group) => TokenTree::Group(Group::new(
-            group.delimiter(),
-            find_and_replace_attributes(nth, fname, group.stream().into_iter()),
-        )),
-        _ => inp,
-    }))
-}*/
-
 struct LiteralReplacer {
     nth: usize,
     fname: Ident,
@@ -178,9 +126,5 @@ fn do_fn(item: TokenStream, release_tweak: bool) -> TokenStream {
     }
     .visit_item_fn_mut(&mut v);
 
-    let output = quote::quote! {
-        #v
-    };
-
-    TokenStream::from(output)
+    v.into_token_stream().into()
 }

@@ -4,6 +4,8 @@
 //! The library is minimal, only requiring the `lazy_static` dependency to hold modified values.
 //! In release mode, the tweaking code is disabled and compiled away.
 //!
+//! The `derive` feature exposes a proc macro to turn all literals from a function body into tweakable values.
+//!
 //! ## Usage
 //!
 //! ```rust
@@ -142,11 +144,18 @@ mod itweak {
         file_modified: SystemTime,
     }
 
+    #[derive(Hash, PartialEq, Eq)]
+    struct TweakKey {
+        filename: Filename,
+        line: u32,
+        column: u32,
+    }
+
     type Filename = &'static str;
 
     lazy_static! {
         /// Stores the values of the tweaks. The key is the file, line and column of the tweak.
-        static ref VALUES: Mutex<FxHashMap<(Filename, u32, u32), TweakValue>> =
+        static ref VALUES: Mutex<FxHashMap<TweakKey, TweakValue>> =
             Default::default();
 
         static ref PARSED_FILES: Mutex<FxHashMap<Filename, ParsedFile>> = Default::default();
@@ -193,14 +202,15 @@ mod itweak {
         {
             return Some(());
         }
-
         f.last_checked_modified_time = Instant::now();
+
         let last_modified = last_modified(filename).unwrap_or_else(SystemTime::now);
 
-        if last_modified == f.file_modified {
+        if last_modified == f.file_modified && f.version != 0 {
             return Some(());
         }
         f.file_modified = last_modified;
+        f.version += 1;
 
         f.values.clear();
 
@@ -233,8 +243,6 @@ mod itweak {
             }
         }
 
-        f.version += 1;
-
         Some(())
     }
 
@@ -244,7 +252,6 @@ mod itweak {
         column: u32,
         file: &ParsedFile,
     ) -> Option<()> {
-        tweak.last_checked = Instant::now();
         if tweak.file_version == file.version {
             return Some(());
         }
@@ -270,7 +277,11 @@ mod itweak {
         let mut lock = VALUES.lock().unwrap();
 
         let tweak = lock
-            .entry((filename, line, column))
+            .entry(TweakKey {
+                filename,
+                line,
+                column,
+            })
             .or_insert_with(|| TweakValue {
                 value: initial_value.map(|inner| Box::new(inner) as Box<dyn Any + Send>),
                 last_checked: Instant::now(),
@@ -278,6 +289,7 @@ mod itweak {
             });
 
         if tweak.last_checked.elapsed().as_secs_f32() > 0.5 {
+            tweak.last_checked = Instant::now();
             let mut fileinfos = PARSED_FILES.lock().unwrap();
             let f = fileinfos.entry(filename).or_insert_with(|| ParsedFile {
                 last_checked_modified_time: Instant::now(),
@@ -337,15 +349,6 @@ mod itweak {
         use syn::visit::Visit;
         use syn::{Attribute, ImplItemFn, ItemFn, Lit, TraitItemFn};
 
-        struct DeriveTweakValue {
-            value: Option<Box<dyn Any + Send>>,
-            position: usize,
-            /// The last time this value was checked for modifications. Avoids too many hashmap lookups.
-            last_checked: Instant,
-            /// The version of the file when the value was last updated.
-            file_version: u64,
-        }
-
         struct ParsedFile {
             /// The last time the file was checked for modifications. Avoids too many syscalls.
             last_checked_modified_time: Instant,
@@ -358,7 +361,7 @@ mod itweak {
         lazy_static! {
             /// Stores the values of the tweaks. The key is the file, the function name and the nth tweak
             /// within the function it is derived from.
-            static ref VALUES_DERIVE: Mutex<FxHashMap<DeriveValueKey, DeriveTweakValue>> =
+            static ref VALUES_DERIVE: Mutex<FxHashMap<DeriveValueKey, TweakValue>> =
                 Default::default();
 
             /// Caches the values of the tweaks before being parsed.
@@ -368,11 +371,12 @@ mod itweak {
 
         #[derive(Debug, Hash, PartialEq, Eq)]
         struct DeriveValueKey {
-            file: Filename,
+            filename: Filename,
             nth: u32,
             fname_hash: u64, // Store a hash of the function name to avoid borrowing constraints
         }
 
+        /// Visiter that finds all number/bool/char literals in a function.
         struct LiteralFinder<'a> {
             file: &'a mut ParsedFile,
             inside_derive_fn: Option<String>,
@@ -482,7 +486,7 @@ mod itweak {
 
             let tweak = lock
                 .entry(DeriveValueKey {
-                    file: filename,
+                    filename: filename,
                     nth,
                     fname_hash: {
                         let mut hasher = rustc_hash::FxHasher::default();
@@ -490,14 +494,14 @@ mod itweak {
                         hasher.finish()
                     },
                 })
-                .or_insert_with(|| DeriveTweakValue {
-                    position: nth as usize,
+                .or_insert_with(|| TweakValue {
                     value: None,
                     last_checked: Instant::now(),
                     file_version: 0,
                 });
 
             if tweak.last_checked.elapsed().as_secs_f32() > 0.5 {
+                tweak.last_checked = Instant::now();
                 let mut fileinfos = PARSED_DERIVE_VALUES.lock().unwrap();
                 let f = fileinfos.entry(filename).or_insert_with(|| ParsedFile {
                     last_checked_modified_time: Instant::now(),
@@ -508,23 +512,23 @@ mod itweak {
 
                 parse_tweaks_derive(f, filename)?;
 
-                update_tweak_derive::<T>(tweak, function_name, f)?;
+                update_tweak_derive::<T>(tweak, function_name, nth, f)?;
             }
 
             tweak.value.as_ref()?.downcast_ref().cloned()
         }
 
         fn update_tweak_derive<T: Tweakable>(
-            tweak: &mut DeriveTweakValue,
+            tweak: &mut TweakValue,
             function_name: &'static str,
+            nth: u32,
             file: &ParsedFile,
         ) -> Option<()> {
-            tweak.last_checked = Instant::now();
             if tweak.file_version == file.version {
                 return Some(());
             }
 
-            let value = &**file.values.get(function_name)?.get(tweak.position)?;
+            let value = &**file.values.get(function_name)?.get(nth as usize)?;
 
             let parsed: Option<T> = Tweakable::parse(value);
 

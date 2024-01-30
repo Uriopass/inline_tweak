@@ -15,8 +15,6 @@ In release mode, the tweaking code is disabled and compiled away.
 
 The `derive` feature exposes a proc macro to turn all literals from a function body into tweakable values.
 
-When targeting `Web/wasm32` all macros will compile but run a no-op, so reloading is not supported for this platform at the moment. 
-
 ## Usage
 
 ```rust
