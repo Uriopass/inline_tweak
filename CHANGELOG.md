@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.14]
+
+ - Fix `tweak_fn` macro when const/static/literals in types (e.g `[f32; 1]`) are used
+
 ## [1.0.13]
 
  - Don't compile derive macro when using `release_tweak` feature
