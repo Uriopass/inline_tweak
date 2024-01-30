@@ -3,6 +3,10 @@ name = "inline_tweak_derive"
 version = "1.0.0"
 authors = ["Paris DOUADY <paris.douady@hotmail.fr>"]
 edition = "2021"
+description = "Macro code generation for inline_tweak"
+repository = "https://github.com/Uriopass/inline_tweak"
+license = "CC0-1.0"
+readme = "README.md"
 
 [lib]
 name = "inline_tweak_derive"
