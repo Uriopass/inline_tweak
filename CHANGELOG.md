@@ -2,30 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.0.16]
-
- - Fix `tweak!` macro when using negative numbers.
-
-## [1.0.15]
-
- - Support strings (even multiline) in `tweak_fn` proc-macro
- - Support more syntax for integers (e.g `0xFF_FF_u64`) and floats (e.g `1_000.0f64`)
-
-## [1.0.14]
-
- - Fix `tweak_fn` macro when const/static/literals in types (e.g `[f32; 1]`) are used
-
-## [1.0.13]
-
- - Don't compile derive macro when using `release_tweak` feature
-
-## [1.0.12]
+## [1.1.0]
 
  - Introduce `derive` feature to allow `#[tweak_fn]` on functions.
  - All calls to tweak are now almost always at most one hashmap lookup.
  - Cache `stat` syscalls.
  - Only read file from disk once per file change instead of per tweak in that file.
- - Add depedency on `rustc-hash` for faster hashing (no need for DOS protection).
+ - Add dependency on `rustc-hash` for faster hashing (no need for DOS protection).
+ - Support multiline strings in `tweak_fn` proc-macro
+ - Support more syntax for integers (e.g `0xFF_FF_u64`) and floats (e.g `1_000.0f64`)
 
 These optimizations heavily reduce the overhead of using tweak!  
 This allows the proc-macro adding tweaks to all literals of not being too heavy.

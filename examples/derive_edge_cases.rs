@@ -9,10 +9,10 @@ fn main() {
         let underscores: i32 = 1_000;
         let radix: i32 = 0xFF;
 
-        let s = "multi
-        lines
+        let s = "mui
+        linea
         strings!";
         println!("{} {} {} {}", s, ok, underscores, radix);
-        inline_tweak::watch!();
+        std::thread::sleep(std::time::Duration::from_millis(20));
     }
 }
