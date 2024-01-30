@@ -214,33 +214,27 @@ mod itweak {
 
         f.values.clear();
 
-        for line in BufReader::new(File::open(filename).ok()?)
-            .lines()
-            .map_while(Result::ok)
-        {
-            let mut it = line.split("tweak!(");
+        let content = std::fs::read_to_string(filename).ok()?;
+        let mut it = content.split("tweak!(");
 
-            if it.next().is_none() {
-                continue;
-            }
+        it.next(); // skip part before first tweak!
 
-            for val_str in it {
-                // Find end of tweak
-                let mut prec = 1;
-                let (end, _) = val_str.char_indices().find(|(_, c)| {
-                    match c {
-                        ';' | ')' if prec == 1 => {
-                            return true;
-                        }
-                        ')' => prec -= 1,
-                        '(' => prec += 1,
-                        _ => {}
+        for val_str in it {
+            // Find end of tweak
+            let mut prec = 1;
+            let (end, _) = val_str.char_indices().find(|(_, c)| {
+                match c {
+                    ';' | ')' if prec == 1 => {
+                        return true;
                     }
-                    false
-                })?;
+                    ')' => prec -= 1,
+                    '(' => prec += 1,
+                    _ => {}
+                }
+                false
+            })?;
 
-                f.values.push(val_str[..end].to_string());
-            }
+            f.values.push(val_str[..end].to_string());
         }
 
         Some(())
