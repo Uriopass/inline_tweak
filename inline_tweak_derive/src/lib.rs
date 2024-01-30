@@ -76,21 +76,13 @@ impl VisitMut for LiteralReplacer {
         }
     }
 
-    fn visit_expr_const_mut(&mut self, _: &mut ExprConst) {
-        return;
-    }
+    fn visit_expr_const_mut(&mut self, _: &mut ExprConst) {}
 
-    fn visit_item_const_mut(&mut self, _: &mut ItemConst) {
-        return;
-    }
+    fn visit_item_const_mut(&mut self, _: &mut ItemConst) {}
 
-    fn visit_item_static_mut(&mut self, _: &mut ItemStatic) {
-        return;
-    }
+    fn visit_item_static_mut(&mut self, _: &mut ItemStatic) {}
 
-    fn visit_type_mut(&mut self, _: &mut Type) {
-        return;
-    }
+    fn visit_type_mut(&mut self, _: &mut Type) {}
 }
 
 /// Makes all the number/bool/char literals in a function tweakable.  

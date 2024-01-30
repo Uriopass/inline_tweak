@@ -441,21 +441,13 @@ mod itweak {
                 });
             }
 
-            fn visit_expr_const(&mut self, _: &ExprConst) {
-                return;
-            }
+            fn visit_expr_const(&mut self, _: &ExprConst) {}
 
-            fn visit_item_const(&mut self, _: &ItemConst) {
-                return;
-            }
+            fn visit_item_const(&mut self, _: &ItemConst) {}
 
-            fn visit_item_static(&mut self, _: &ItemStatic) {
-                return;
-            }
+            fn visit_item_static(&mut self, _: &ItemStatic) {}
 
-            fn visit_type(&mut self, _: &Type) {
-                return;
-            }
+            fn visit_type(&mut self, _: &Type) {}
         }
 
         fn parse_tweaks_derive<'a>(f: &mut ParsedFile, filename: Filename) -> Option<()> {
