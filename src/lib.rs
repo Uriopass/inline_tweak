@@ -341,7 +341,9 @@ mod itweak {
         use std::sync::Mutex;
         use std::time::{Instant, SystemTime};
         use syn::visit::Visit;
-        use syn::{Attribute, ImplItemFn, ItemFn, Lit, TraitItemFn};
+        use syn::{
+            Attribute, ExprConst, ImplItemFn, ItemConst, ItemFn, ItemStatic, Lit, TraitItemFn, Type,
+        };
 
         struct ParsedFile {
             /// The last time the file was checked for modifications. Avoids too many syscalls.
@@ -437,6 +439,22 @@ mod itweak {
                 self.enter_fn(i.sig.ident.to_string(), &i.attrs, |me| {
                     syn::visit::visit_trait_item_fn(me, i);
                 });
+            }
+
+            fn visit_expr_const(&mut self, _: &ExprConst) {
+                return;
+            }
+
+            fn visit_item_const(&mut self, _: &ItemConst) {
+                return;
+            }
+
+            fn visit_item_static(&mut self, _: &ItemStatic) {
+                return;
+            }
+
+            fn visit_type(&mut self, _: &Type) {
+                return;
             }
         }
 

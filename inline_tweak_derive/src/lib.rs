@@ -5,8 +5,8 @@ use quote::ToTokens;
 use syn::punctuated::Punctuated;
 use syn::visit_mut::VisitMut;
 use syn::{
-    parse_macro_input, Expr, ExprBreak, ExprMacro, Lit, LitInt, LitStr, Macro, MacroDelimiter,
-    Path, PathSegment, Token,
+    parse_macro_input, Expr, ExprBreak, ExprConst, ExprMacro, ItemConst, ItemStatic, Lit, LitInt,
+    LitStr, Macro, MacroDelimiter, Path, PathSegment, Token, Type,
 };
 
 struct LiteralReplacer {
@@ -69,6 +69,22 @@ impl VisitMut for LiteralReplacer {
             }
             _ => syn::visit_mut::visit_expr_mut(self, i),
         }
+    }
+
+    fn visit_expr_const_mut(&mut self, _: &mut ExprConst) {
+        return;
+    }
+
+    fn visit_item_const_mut(&mut self, _: &mut ItemConst) {
+        return;
+    }
+
+    fn visit_item_static_mut(&mut self, _: &mut ItemStatic) {
+        return;
+    }
+
+    fn visit_type_mut(&mut self, _: &mut Type) {
+        return;
     }
 }
 

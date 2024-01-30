@@ -20,7 +20,7 @@ lazy_static = "1.4.0"
 rustc-hash = "1.1.0"
 
 # Derive
-inline_tweak_derive = { version = "1.0.0", optional = true }
+inline_tweak_derive = { path = "inline_tweak_derive", optional = true }
 syn = { version = "2.0", optional = true, default-features = false, features = ["parsing", "full", "visit"]}
 proc-macro2 = { version = "1.0", optional = true, default-features = false, features = ["span-locations"]}
 
@@ -35,6 +35,10 @@ required-features = ["release_tweak"]
 
 [[example]]
 name = "derive"
+required-features = ["derive"]
+
+[[example]]
+name = "derive_avoid"
 required-features = ["derive"]
 
 [[example]]
