@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.16]
+
+ - Fix `tweak!` macro when using negative numbers.
+
 ## [1.0.15]
 
  - Support strings (even multiline) in `tweak_fn` proc-macro
