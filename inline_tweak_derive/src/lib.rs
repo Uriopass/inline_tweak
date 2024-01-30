@@ -20,7 +20,7 @@ impl VisitMut for LiteralReplacer {
         match *i {
             Expr::Lit(ref l) => {
                 match l.lit {
-                    Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) => {}
+                    Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) | Lit::Str(_) => {}
                     _ => return,
                 }
 

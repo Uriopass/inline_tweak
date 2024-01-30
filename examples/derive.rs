@@ -4,7 +4,7 @@ fn main() {
         let char = 'c';
         let bool = true;
         let v = 1.0 + 5.0;
-        println!("{} {} {}", v, char, bool);
+        println!("{} {} {} {}", v, char, bool, s);
         inline_tweak::watch!();
     }
 }

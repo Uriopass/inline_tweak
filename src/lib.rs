@@ -69,6 +69,7 @@ pub trait Tweakable: Sized + Send + Clone + 'static {
 #[cfg(any(debug_assertions, feature = "release_tweak"))]
 mod itweak {
     use super::Tweakable;
+    use core::str::FromStr;
     use lazy_static::*;
     use rustc_hash::FxHashMap;
     use std::any::Any;
@@ -77,19 +78,63 @@ mod itweak {
     use std::sync::Mutex;
     use std::time::{Instant, SystemTime};
 
-    macro_rules! impl_tweakable {
+    macro_rules! impl_tweakable_float {
         ($($t: ty) +) => {
             $(
             impl Tweakable for $t {
                 fn parse(x: &str) -> Option<$t> {
-                    x.parse().ok()
+                    let v = x.replace("_", "");
+                    FromStr::from_str(&v).ok()
                 }
             }
             )+
         };
     }
 
-    impl_tweakable!(u8 u16 u32 u64 u128 i8 i16 i32 i64 i128 usize isize bool f32 f64);
+    // Follows reference https://doc.rust-lang.org/reference/expressions/literal-expr.html
+    macro_rules! impl_tweakable_integer {
+        ($($t: ty) +) => {
+            $(
+            impl Tweakable for $t {
+                fn parse(x: &str) -> Option<$t> {
+                    let s = x.replace("_", "");
+                    let radix = if s.starts_with("0x") {
+                        16
+                    } else if s.starts_with("0o") {
+                        8
+                    } else if s.starts_with("0b") {
+                        2
+                    } else {
+                        10
+                    };
+
+                    let s_without_radix = if radix == 10 {
+                        &s
+                    } else {
+                        &s[2..]
+                    };
+
+                    let v = u128::from_str_radix(&s_without_radix, radix).ok()?;
+
+                    Some(v as $t)
+                }
+            }
+            )+
+        };
+    }
+
+    impl_tweakable_integer!(u8 u16 u32 u64 u128 i8 i16 i32 i64 i128 usize isize);
+    impl_tweakable_float!(f32 f64);
+
+    impl Tweakable for bool {
+        fn parse(x: &str) -> Option<Self> {
+            match x {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            }
+        }
+    }
 
     impl Tweakable for char {
         fn parse(x: &str) -> Option<Self> {
@@ -102,9 +147,18 @@ mod itweak {
 
     impl Tweakable for &'static str {
         fn parse(x: &str) -> Option<Self> {
-            Some(Box::leak(Box::new(String::from(
-                x.trim_start_matches('"').trim_end_matches('"'),
-            ))))
+            let raw_remove = x.trim_start_matches(['r', '#']).trim_end_matches('#');
+            let remove_starting_quote = raw_remove
+                .split_once('"')
+                .map(|v| v.1)
+                .unwrap_or(raw_remove);
+
+            let remove_ending_quote = remove_starting_quote
+                .rsplit_once('"')
+                .map(|v| v.0)
+                .unwrap_or(remove_starting_quote);
+
+            Some(Box::leak(Box::new(String::from(remove_ending_quote))))
         }
     }
 
@@ -419,12 +473,14 @@ mod itweak {
 
             fn visit_lit(&mut self, l: &'ast Lit) {
                 match l {
-                    Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) => {}
+                    Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) | Lit::Str(_) => {}
                     _ => return,
                 }
 
                 if let Some(ref fn_name) = self.inside_derive_fn {
-                    if let Some(t) = l.span().source_text() {
+                    if let Some(mut t) = l.span().source_text() {
+                        let newlen = t.trim_end_matches(l.suffix()).len();
+                        t.truncate(newlen);
                         if let Some(v) = self.file.values.get_mut(fn_name) {
                             v.push(t);
                         } else {
