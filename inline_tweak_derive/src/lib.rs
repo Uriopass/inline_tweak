@@ -18,7 +18,12 @@ struct LiteralReplacer {
 impl VisitMut for LiteralReplacer {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         match *i {
-            Expr::Lit(_) => {
+            Expr::Lit(ref l) => {
+                match l.lit {
+                    Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) => {}
+                    _ => return,
+                }
+
                 let lit = std::mem::replace(
                     i,
                     Expr::Break(ExprBreak {
