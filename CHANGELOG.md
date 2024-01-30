@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.15]
+
+ - Support strings (even multiline) in `tweak_fn` proc-macro
+ - Support more syntax for integers (e.g `0xFF_FF_u64`) and floats (e.g `1_000.0f64`)
+
 ## [1.0.14]
 
  - Fix `tweak_fn` macro when const/static/literals in types (e.g `[f32; 1]`) are used
