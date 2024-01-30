@@ -13,6 +13,8 @@ It works by parsing the file when a change occurs.
 The library is minimal, only requiring the `lazy_static` dependency to hold modified values.  
 In release mode, the tweaking code is disabled and compiled away.
 
+The `derive` feature exposes a proc macro to turn all literals from a function body into tweakable values.
+
 When targeting `Web/wasm32` all macros will compile but run a no-op, so reloading is not supported for this platform at the moment. 
 
 ## Usage
@@ -28,6 +30,25 @@ fn main() {
 ```
 
 ## Extra features
+
+### derive
+
+The `derive` feature allows to tweak any number/bool/char literal in a function.
+It avoids cluttering the code with `inline_tweak::tweak!` calls.
+
+```rust
+#[inline_tweak::tweak_fn]
+fn main() {
+    loop {
+       let v = 1.0; // Try changing this value!
+       println!("{}", v);
+       std::thread::sleep(Duration::from_millis(200)); // or even this value :)
+    }
+}
+```
+
+Note that it requires `syn`/`quote`/`proc_macro2` dependencies which makes the crate slower to compile.  
+Contrary to `tweak!`, it does not allow tweaking literals in macro calls (like `println!`), as it cannot reliably replace literals by a function call since macros can have custom syntax.
 
 #### watch!
 

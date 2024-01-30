@@ -12,7 +12,7 @@ fn counter() -> i32 {
 fn main() {
     loop {
         // Try removing or changing the value while the application is running
-        println!("{}", tweak!(100; counter()));
+        println!("{}", tweak!(200; counter()));
         std::thread::sleep(Duration::from_millis(1000));
     }
 }
