@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.13]
+
+ - Don't compile derive macro when using `release_tweak` feature
+
 ## [1.0.12]
 
  - Introduce `derive` feature to allow `#[tweak_fn]` on functions.
