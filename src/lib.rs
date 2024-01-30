@@ -537,20 +537,20 @@ mod itweak {
 #[cfg(any(debug_assertions, feature = "release_tweak"))]
 pub fn inline_tweak<T: Tweakable>(
     initial_value: Option<T>,
-    file: &'static str,
+    filename: &'static str,
     line: u32,
     column: u32,
 ) -> Option<T> {
-    itweak::get_value(initial_value, file, line, column)
+    itweak::get_value(initial_value, filename, line, column)
 }
 
 #[cfg(all(feature = "derive", any(debug_assertions, feature = "release_tweak")))]
 pub fn inline_tweak_derive<T: Tweakable>(
     file: &'static str,
-    fname: &'static str,
+    function_name: &'static str,
     nth: u32,
 ) -> Option<T> {
-    itweak::derive::get_value_derive(file, fname, nth)
+    itweak::derive::get_value_derive(file, function_name, nth)
 }
 
 #[cfg(all(feature = "release_tweak", not(target_arch = "wasm32")))]
@@ -630,8 +630,8 @@ mod macros_tweak {
     }
 
     #[doc(hidden)]
-    pub fn watch_file(file: &'static str) {
-        while !itweak::watch_modified(file) {
+    pub fn watch_file(filename: &'static str) {
+        while !itweak::watch_modified(filename) {
             std::thread::sleep(std::time::Duration::from_millis(500));
         }
     }
@@ -665,7 +665,7 @@ mod macros_tweak {
     }
 
     #[doc(hidden)]
-    pub fn watch_file(_file: &'static str) {}
+    pub fn watch_file(_filename: &'static str) {}
 
     #[macro_export]
     macro_rules! watch {
