@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
  - All calls to tweak are now almost always at most one hashmap lookup.
  - Cache `stat` syscalls.
  - Only read file from disk once per file change instead of per tweak in that file.
+ - Add depedency on `rustc-hash` for faster hashing (no need for DOS protection).
 
 These optimizations heavily reduce the overhead of using tweak!  
 This allows the proc-macro adding tweaks to all literals of not being too heavy.
