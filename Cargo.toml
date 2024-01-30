@@ -1,6 +1,6 @@
 [package]
 name = "inline_tweak"
-version = "1.0.15"
+version = "1.0.16"
 authors = ["Paris DOUADY <paris.douady@hotmail.fr>"]
 edition = "2021"
 keywords = ["gamedev", "tweak", "inline", "config", "tool"]
