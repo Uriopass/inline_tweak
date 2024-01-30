@@ -114,7 +114,7 @@ mod itweak {
                         &s[2..]
                     };
 
-                    let v = u128::from_str_radix(&s_without_radix, radix).ok()?;
+                    let v = i128::from_str_radix(&s_without_radix, radix).ok()?;
 
                     Some(v as $t)
                 }
