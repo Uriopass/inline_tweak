@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1]
+ - Fix `tweak_fn` not compiling if function has doc comments
+
 ## [1.1.0]
 
  - Introduce `derive` feature to allow `#[tweak_fn]` on functions.
