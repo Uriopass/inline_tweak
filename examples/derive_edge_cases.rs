@@ -1,4 +1,5 @@
 #[inline_tweak::tweak_fn]
+/// test
 fn main() {
     loop {
         const C: i32 = 3;

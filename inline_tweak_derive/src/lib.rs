@@ -5,8 +5,8 @@ use quote::ToTokens;
 use syn::punctuated::Punctuated;
 use syn::visit_mut::VisitMut;
 use syn::{
-    parse_macro_input, Expr, ExprBreak, ExprConst, ExprMacro, ItemConst, ItemStatic, Lit, LitInt,
-    LitStr, Macro, MacroDelimiter, Path, PathSegment, Token, Type,
+    parse_macro_input, Attribute, Expr, ExprBreak, ExprConst, ExprMacro, ItemConst, ItemStatic,
+    Lit, LitInt, LitStr, Macro, MacroDelimiter, Path, PathSegment, Token, Type,
 };
 
 struct LiteralReplacer {
@@ -83,6 +83,8 @@ impl VisitMut for LiteralReplacer {
     fn visit_item_static_mut(&mut self, _: &mut ItemStatic) {}
 
     fn visit_type_mut(&mut self, _: &mut Type) {}
+
+    fn visit_attribute_mut(&mut self, _: &mut Attribute) {}
 }
 
 /// Makes all the number/bool/char literals in a function tweakable.  

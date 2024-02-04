@@ -497,6 +497,8 @@ mod itweak {
                 });
             }
 
+            fn visit_attribute(&mut self, _: &Attribute) {}
+
             fn visit_expr_const(&mut self, _: &ExprConst) {}
 
             fn visit_item_const(&mut self, _: &ItemConst) {}
