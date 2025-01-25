@@ -15,62 +15,82 @@ struct LiteralReplacer {
     release_tweak: bool,
 }
 
+impl LiteralReplacer {
+    fn replace(&mut self, i: &mut Expr) {
+        let expr = std::mem::replace(
+            i,
+            Expr::Break(ExprBreak {
+                attrs: vec![],
+                break_token: Default::default(),
+                label: None,
+                expr: None,
+            }),
+        );
+
+        *i = Expr::Macro(ExprMacro {
+            attrs: vec![],
+            mac: Macro {
+                path: Path {
+                    segments: [
+                        PathSegment::from(Ident::new("inline_tweak", Span::call_site())),
+                        PathSegment::from(Ident::new(
+                            if self.release_tweak {
+                                "derive_release_tweak"
+                            } else {
+                                "derive_tweak"
+                            },
+                            Span::call_site(),
+                        )),
+                    ]
+                    .into_iter()
+                    .collect(),
+                    leading_colon: Some(Default::default()),
+                },
+                bang_token: Default::default(),
+                delimiter: MacroDelimiter::Paren(Default::default()),
+                tokens: [
+                    expr,
+                    Expr::Lit(syn::ExprLit {
+                        attrs: vec![],
+                        lit: Lit::Str(LitStr::new(&self.fname.to_string(), Span::call_site())),
+                    }),
+                    Expr::Lit(syn::ExprLit {
+                        attrs: vec![],
+                        lit: Lit::Int(LitInt::new(&self.nth.to_string(), Span::call_site())),
+                    }),
+                ]
+                .into_iter()
+                .collect::<Punctuated<Expr, Token![,]>>()
+                .into_token_stream(),
+            },
+        });
+
+        self.nth += 1;
+    }
+}
+
 impl VisitMut for LiteralReplacer {
     fn visit_expr_mut(&mut self, i: &mut Expr) {
         match *i {
-            Expr::Lit(ref l) => {
-                match l.lit {
-                    Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) | Lit::Str(_) => {}
-                    _ => return,
-                }
-
-                let lit = std::mem::replace(
-                    i,
-                    Expr::Break(ExprBreak {
-                        attrs: vec![],
-                        break_token: Default::default(),
-                        label: None,
-                        expr: None,
-                    }),
-                );
-
-                let Expr::Lit(lit) = lit else {
-                    unreachable!();
-                };
-
-                *i = Expr::Macro(ExprMacro {
-                    attrs: vec![],
-                    mac: Macro {
-                        path: Path {
-                            segments: [
-                                PathSegment::from(Ident::new("inline_tweak", Span::call_site())),
-                                PathSegment::from(Ident::new(
-                                    if self.release_tweak {
-                                        "derive_release_tweak"
-                                    } else {
-                                        "derive_tweak"
-                                    },
-                                    Span::call_site(),
-                                )),
-                            ]
-                            .into_iter()
-                            .collect(),
-                            leading_colon: Some(Default::default()),
-                        },
-                        bang_token: Default::default(),
-                        delimiter: MacroDelimiter::Paren(Default::default()),
-                        tokens: [
-                            lit.lit,
-                            Lit::Str(LitStr::new(&self.fname.to_string(), Span::call_site())),
-                            Lit::Int(LitInt::new(&self.nth.to_string(), Span::call_site())),
-                        ]
-                        .into_iter()
-                        .collect::<Punctuated<Lit, Token![,]>>()
-                        .into_token_stream(),
-                    },
-                });
-
-                self.nth += 1;
+            Expr::Lit(syn::ExprLit {
+                lit: Lit::Char(_) | Lit::Int(_) | Lit::Float(_) | Lit::Bool(_) | Lit::Str(_),
+                ..
+            }) => {
+                self.replace(i);
+            }
+            Expr::Unary(syn::ExprUnary {
+                op: syn::UnOp::Neg(_),
+                ref expr,
+                ..
+            }) if matches!(
+                &**expr,
+                Expr::Lit(syn::ExprLit {
+                    lit: Lit::Int(_) | Lit::Float(_),
+                    ..
+                })
+            ) =>
+            {
+                self.replace(i);
             }
             _ => syn::visit_mut::visit_expr_mut(self, i),
         }

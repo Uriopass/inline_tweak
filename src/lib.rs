@@ -394,6 +394,7 @@ mod itweak {
         use std::hash::{Hash, Hasher};
         use std::sync::Mutex;
         use std::time::{Instant, SystemTime};
+        use syn::spanned::Spanned;
         use syn::visit::Visit;
         use syn::{
             Attribute, ExprConst, ImplItemFn, ItemConst, ItemFn, ItemStatic, Lit, TraitItemFn, Type,
@@ -488,6 +489,38 @@ mod itweak {
                         }
                     }
                     self.derive_fn_count += 1;
+                }
+            }
+
+            fn visit_expr(&mut self, i: &'ast syn::Expr) {
+                match i {
+                    syn::Expr::Unary(syn::ExprUnary {
+                        op: syn::UnOp::Neg(_),
+                        expr,
+                        ..
+                    }) => {
+                        if let syn::Expr::Lit(syn::ExprLit {
+                            lit: l @ (Lit::Int(_) | Lit::Float(_)),
+                            ..
+                        }) = &**expr
+                        {
+                            if let Some(ref fn_name) = self.inside_derive_fn {
+                                if let Some(mut t) = i.span().source_text() {
+                                    let newlen = t.trim_end_matches(l.suffix()).len();
+                                    t.truncate(newlen);
+                                    if let Some(v) = self.file.values.get_mut(fn_name) {
+                                        v.push(t);
+                                    } else {
+                                        self.file.values.insert(fn_name.clone(), vec![t]);
+                                    }
+                                }
+                                self.derive_fn_count += 1;
+                            }
+                        } else {
+                            syn::visit::visit_expr(self, i)
+                        }
+                    }
+                    _ => syn::visit::visit_expr(self, i),
                 }
             }
 
