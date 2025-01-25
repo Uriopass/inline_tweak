@@ -1,6 +1,6 @@
 [package]
 name = "inline_tweak"
-version = "1.1.1"
+version = "1.1.2"
 authors = ["Paris DOUADY <paris.douady@hotmail.fr>"]
 edition = "2021"
 keywords = ["gamedev", "tweak", "inline", "config", "tool"]
@@ -17,10 +17,10 @@ repository = "https://github.com/Uriopass/inline_tweak"
 
 [dependencies]
 lazy_static = "1.4.0"
-rustc-hash = "1.1.0"
+rustc-hash = "2.1.0"
 
 # Derive
-inline_tweak_derive = { version = "3.0.0", optional = true }
+inline_tweak_derive = { version = "4.0.0", optional = true }
 syn = { version = "2.0", optional = true, default-features = false, features = ["parsing", "printing", "full", "visit"]}
 proc-macro2 = { version = "1.0", optional = true, default-features = false, features = ["span-locations"]}
 
