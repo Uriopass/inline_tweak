@@ -3,7 +3,8 @@ fn main() {
     loop {
         let char = 'c';
         let bool = true;
-        let v = 1.0 + 5.0;
+        let v = 1.0 + 7.0;
+        let s = "hello";
         println!("{} {} {} {}", v, char, bool, s);
         inline_tweak::watch!();
     }
