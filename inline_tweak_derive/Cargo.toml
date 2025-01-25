@@ -1,6 +1,6 @@
 [package]
 name = "inline_tweak_derive"
-version = "3.0.0"
+version = "4.0.0"
 authors = ["Paris DOUADY <paris.douady@hotmail.fr>"]
 edition = "2021"
 description = "Macro code generation for inline_tweak"
