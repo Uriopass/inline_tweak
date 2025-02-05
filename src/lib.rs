@@ -70,12 +70,11 @@ pub trait Tweakable: Sized + Send + Clone + 'static {
 mod itweak {
     use super::Tweakable;
     use core::str::FromStr;
-    use lazy_static::*;
     use rustc_hash::FxHashMap;
     use std::any::Any;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
-    use std::sync::Mutex;
+    use std::sync::{LazyLock, Mutex};
     use std::time::{Instant, SystemTime};
 
     macro_rules! impl_tweakable_float {
@@ -207,15 +206,15 @@ mod itweak {
 
     type Filename = &'static str;
 
-    lazy_static! {
-        /// Stores the values of the tweaks. The key is the file, line and column of the tweak.
-        static ref VALUES: Mutex<FxHashMap<TweakKey, TweakValue>> =
-            Default::default();
+    /// Stores the values of the tweaks. The key is the file, line and column of the tweak.
+    static VALUES: LazyLock<Mutex<FxHashMap<TweakKey, TweakValue>>> =
+        LazyLock::new(Default::default);
 
-        static ref PARSED_FILES: Mutex<FxHashMap<Filename, ParsedFile>> = Default::default();
+    static PARSED_FILES: LazyLock<Mutex<FxHashMap<Filename, ParsedFile>>> =
+        LazyLock::new(Default::default);
 
-        static ref WATCHERS: Mutex<FxHashMap<Filename, FileWatcher>> = Default::default();
-    }
+    static WATCHERS: LazyLock<Mutex<FxHashMap<Filename, FileWatcher>>> =
+        LazyLock::new(Default::default);
 
     fn last_modified(file: Filename) -> Option<SystemTime> {
         File::open(file).ok()?.metadata().ok()?.modified().ok()
@@ -388,7 +387,6 @@ mod itweak {
         use super::*;
 
         use crate::Tweakable;
-        use lazy_static::lazy_static;
         use rustc_hash::FxHashMap;
         use std::any::Any;
         use std::hash::{Hash, Hasher};
@@ -409,16 +407,15 @@ mod itweak {
             version: u64,
         }
 
-        lazy_static! {
-            /// Stores the values of the tweaks. The key is the file, the function name and the nth tweak
-            /// within the function it is derived from.
-            static ref VALUES_DERIVE: Mutex<FxHashMap<DeriveValueKey, TweakValue>> =
-                Default::default();
+        /// Stores the values of the tweaks. The key is the file, the function name and the nth tweak
+        /// within the function it is derived from.
+        static VALUES_DERIVE: LazyLock<Mutex<FxHashMap<DeriveValueKey, TweakValue>>> =
+            LazyLock::new(Default::default);
 
-            /// Caches the values of the tweaks before being parsed.
-            /// This allows only parsing the updated file once instead of every tweak call.
-            static ref PARSED_DERIVE_VALUES: Mutex<FxHashMap<Filename, ParsedFile>> = Default::default();
-        }
+        /// Caches the values of the tweaks before being parsed.
+        /// This allows only parsing the updated file once instead of every tweak call.
+        static PARSED_DERIVE_VALUES: LazyLock<Mutex<FxHashMap<Filename, ParsedFile>>> =
+            LazyLock::new(Default::default);
 
         #[derive(Debug, Hash, PartialEq, Eq)]
         struct DeriveValueKey {
