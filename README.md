@@ -10,7 +10,6 @@ by tuxedo labs.
 Tweak any literal directly from your code, changes to the source appear while running the program.  
 It works by parsing the file when a change occurs.  
 
-The library is minimal, only requiring the `lazy_static` dependency to hold modified values.  
 In release mode, the tweaking code is disabled and compiled away.
 
 The `derive` feature exposes a proc macro to turn all literals from a function body into tweakable values.

@@ -16,7 +16,6 @@ categories = [
 repository = "https://github.com/Uriopass/inline_tweak"
 
 [dependencies]
-lazy_static = "1.4.0"
 rustc-hash = "2.1.0"
 
 # Derive
