@@ -62,6 +62,7 @@
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 #![allow(clippy::needless_doctest_main)]
 
+#[cfg(any(debug_assertions, feature = "release_tweak"))]
 mod hasher;
 
 pub trait Tweakable: Sized + Send + Clone + 'static {
