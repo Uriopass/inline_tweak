@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.2.0]
  - Breaking: `release_tweak` is now unavailable if the `release_tweak` feature is not enabled. 
    It used to be available _but_ didn't do anything which was highly misleading.
+ - Remove `lazy_static` and `rustc_hash` dependency (updates M.S.R.V. to 1.80). Now dependency-free!
 
 ## [1.1.1]
  - Fix `tweak_fn` not compiling if function has doc comments

@@ -14,9 +14,9 @@ categories = [
     "rust-patterns",
 ]
 repository = "https://github.com/Uriopass/inline_tweak"
+rust-version = "1.80.0"
 
 [dependencies]
-rustc-hash = "2.1.0"
 
 # Derive
 inline_tweak_derive = { version = "4.0.0", optional = true }

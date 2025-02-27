@@ -4,15 +4,16 @@
 
 [![Crates.io](https://img.shields.io/crates/v/inline_tweak.svg)](https://crates.io/crates/inline_tweak)
 
-**inline_tweak** is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
-by tuxedo labs.  
-
 Tweak any literal directly from your code, changes to the source appear while running the program.  
 It works by parsing the file when a change occurs.  
 
+The library is minimal with **0** dependencies.  
 In release mode, the tweaking code is disabled and compiled away.
 
 The `derive` feature exposes a proc macro to turn all literals from a function body into tweakable values.
+
+**inline_tweak** is based on [this blogpost](http://blog.tuxedolabs.com/2018/03/13/hot-reloading-hardcoded-parameters.html)
+by tuxedo labs.
 
 ## Usage
 

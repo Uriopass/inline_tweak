@@ -1,7 +1,7 @@
 //! Tweak any literal directly from your code, changes to the source appear while running the program.
 //! It works by parsing the file when a change occurs.
 //!
-//! The library is minimal, only requiring the `lazy_static` dependency to hold modified values.
+//! The library is minimal with 0 dependencies.
 //! In release mode, the tweaking code is disabled and compiled away.
 //!
 //! The `derive` feature exposes a proc macro to turn all literals from a function body into tweakable values.
@@ -62,6 +62,8 @@
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 #![allow(clippy::needless_doctest_main)]
 
+mod hasher;
+
 pub trait Tweakable: Sized + Send + Clone + 'static {
     fn parse(x: &str) -> Option<Self>;
 }
@@ -70,7 +72,7 @@ pub trait Tweakable: Sized + Send + Clone + 'static {
 mod itweak {
     use super::Tweakable;
     use core::str::FromStr;
-    use rustc_hash::FxHashMap;
+    use crate::hasher::FxHashMap;
     use std::any::Any;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -387,7 +389,7 @@ mod itweak {
         use super::*;
 
         use crate::Tweakable;
-        use rustc_hash::FxHashMap;
+        use crate::hasher::FxHashMap;
         use std::any::Any;
         use std::hash::{Hash, Hasher};
         use std::sync::Mutex;
@@ -581,7 +583,7 @@ mod itweak {
                     filename: filename,
                     nth,
                     fname_hash: {
-                        let mut hasher = rustc_hash::FxHasher::default();
+                        let mut hasher = crate::hasher::FxHasher::default();
                         function_name.hash(&mut hasher);
                         hasher.finish()
                     },
