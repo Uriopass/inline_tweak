@@ -673,7 +673,7 @@ mod macros_release {
     }
 }
 
-#[cfg(any(not(feature = "release_tweak"), target_arch = "wasm32"))]
+#[cfg(all(feature = "release_tweak", target_arch = "wasm32"))]
 mod macros_release {
     #[macro_export]
     macro_rules! release_tweak {
