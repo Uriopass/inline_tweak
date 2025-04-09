@@ -2,6 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2]
+ - Avoid conflict with file/line/column namespace by calling macro using fullpath.
+
 ## [1.2.0]
  - Breaking: `release_tweak` is now unavailable if the `release_tweak` feature is not enabled. 
    It used to be available _but_ didn't do anything which was highly misleading.

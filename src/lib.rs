@@ -659,11 +659,11 @@ mod macros_release {
     #[macro_export]
     macro_rules! release_tweak {
         ($default:expr) => {
-            inline_tweak::inline_tweak(None, file!(), line!(), column!())
+            inline_tweak::inline_tweak(None, std::file!(), std::line!(), std::column!())
                 .unwrap_or_else(|| $default)
         };
         ($value:literal; $default:expr) => {
-            inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
+            inline_tweak::inline_tweak(Some($value), std::file!(), std::line!(), std::column!())
                 .unwrap_or_else(|| $default)
         };
     }
@@ -671,7 +671,7 @@ mod macros_release {
     #[macro_export]
     macro_rules! derive_release_tweak {
         ($default:expr, $fn_name:expr, $position:expr) => {
-            inline_tweak::inline_tweak_derive(file!(), $fn_name, $position).unwrap_or($default)
+            inline_tweak::inline_tweak_derive(std::file!(), $fn_name, $position).unwrap_or($default)
         };
     }
 }
@@ -691,7 +691,7 @@ mod macros_release {
     #[macro_export]
     macro_rules! derive_release_tweak {
         ($default:expr, $fn_name:expr, $position:expr) => {
-            inline_tweak::inline_tweak_derive(file!(), $fn_name, $position)
+            inline_tweak::inline_tweak_derive(std::file!(), $fn_name, $position)
                 .unwrap_or_else(|| $default)
         };
     }
@@ -703,11 +703,11 @@ mod macros_tweak {
     #[macro_export]
     macro_rules! tweak {
         ($default:expr) => {
-            inline_tweak::inline_tweak(None, file!(), line!(), column!())
+            inline_tweak::inline_tweak(None, std::file!(), std::line!(), std::column!())
                 .unwrap_or_else(|| $default)
         };
         ($value:literal; $default:expr) => {
-            inline_tweak::inline_tweak(Some($value), file!(), line!(), column!())
+            inline_tweak::inline_tweak(Some($value), std::file!(), std::line!(), std::column!())
                 .unwrap_or_else(|| $default)
         };
     }
@@ -717,7 +717,7 @@ mod macros_tweak {
     #[macro_export]
     macro_rules! derive_tweak {
         ($default:expr, $fn_name:expr, $position:expr) => {
-            inline_tweak::inline_tweak_derive(file!(), $fn_name, $position).unwrap_or($default)
+            inline_tweak::inline_tweak_derive(std::file!(), $fn_name, $position).unwrap_or($default)
         };
     }
 
@@ -740,7 +740,7 @@ mod macros_tweak {
     #[macro_export]
     macro_rules! watch {
         () => {
-            inline_tweak::watch_file(file!());
+            inline_tweak::watch_file(std::file!());
         };
     }
 }
