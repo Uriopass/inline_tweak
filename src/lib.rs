@@ -99,7 +99,7 @@ mod itweak {
             $(
             impl Tweakable for $t {
                 fn parse(x: &str) -> Option<$t> {
-                    let s = x.replace("_", "");
+                    let s = x.replace("_", "").replace(stringify!($t), "");
                     let radix = if s.starts_with("0x") {
                         16
                     } else if s.starts_with("0o") {
