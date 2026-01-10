@@ -85,7 +85,7 @@ mod itweak {
             $(
             impl Tweakable for $t {
                 fn parse(x: &str) -> Option<$t> {
-                    let v = x.replace("_", "");
+                    let v = x.replace("_", "").replace(stringify!($t), "");
                     FromStr::from_str(&v).ok()
                 }
             }
