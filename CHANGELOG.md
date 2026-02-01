@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4]
+ - Fix wasm32 builds: disable inline_tweak compilation entirely (so there's no std::time)
+
+## [1.2.3]
+ - Fix floating point parsing like "1.0f64"
+
 ## [1.2.2]
  - Avoid conflict with file/line/column namespace by calling macro using fullpath.
 
