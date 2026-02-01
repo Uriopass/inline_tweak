@@ -62,14 +62,14 @@
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 #![allow(clippy::needless_doctest_main)]
 
-#[cfg(any(debug_assertions, feature = "release_tweak"))]
+#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
 mod hasher;
 
 pub trait Tweakable: Sized + Send + Clone + 'static {
     fn parse(x: &str) -> Option<Self>;
 }
 
-#[cfg(any(debug_assertions, feature = "release_tweak"))]
+#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
 mod itweak {
     use super::Tweakable;
     use core::str::FromStr;
@@ -635,7 +635,7 @@ mod itweak {
     }
 }
 
-#[cfg(any(debug_assertions, feature = "release_tweak"))]
+#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
 pub fn inline_tweak<T: Tweakable>(
     initial_value: Option<T>,
     filename: &'static str,
@@ -645,7 +645,7 @@ pub fn inline_tweak<T: Tweakable>(
     itweak::get_value(initial_value, filename, line, column)
 }
 
-#[cfg(all(feature = "derive", any(debug_assertions, feature = "release_tweak")))]
+#[cfg(all(feature = "derive", all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32"))))]
 pub fn inline_tweak_derive<T: Tweakable>(
     file: &'static str,
     function_name: &'static str,
