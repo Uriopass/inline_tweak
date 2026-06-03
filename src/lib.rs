@@ -166,9 +166,15 @@ mod itweak {
                 .map(|v| v.0)
                 .unwrap_or(remove_starting_quote);
 
-            Some(Box::leak(
-                String::from(remove_ending_quote).into_boxed_str(),
-            ))
+            let raw = Box::into_raw(String::from(remove_ending_quote).into_boxed_str());
+            let key = raw.addr();
+
+            OWNED_STRINGS.lock().unwrap().insert(key, OwnedStrPtr(raw));
+
+            // SAFETY: `raw` was just produced by `Box::into_raw`, is uniquely
+            // owned, and the registry will keep its provenance alive until
+            // `cleanup_value` deallocates it.
+            Some(unsafe { &*raw })
         }
     }
 
@@ -217,6 +223,12 @@ mod itweak {
 
     type Filename = &'static str;
 
+    // A pointer to an owned, leaked string.
+    struct OwnedStrPtr(*mut str);
+
+    // Safety: This type has the ownership semantics of `Box<str>`
+    unsafe impl Send for OwnedStrPtr {}
+
     /// Stores the values of the tweaks. The key is the file, line and column of the tweak.
     static VALUES: LazyLock<Mutex<FxHashMap<TweakKey, TweakValue>>> =
         LazyLock::new(Default::default);
@@ -225,6 +237,10 @@ mod itweak {
         LazyLock::new(Default::default);
 
     static WATCHERS: LazyLock<Mutex<FxHashMap<Filename, FileWatcher>>> =
+        LazyLock::new(Default::default);
+
+    // Used to allow strings to be freed
+    static OWNED_STRINGS: LazyLock<Mutex<FxHashMap<usize, OwnedStrPtr>>> =
         LazyLock::new(Default::default);
 
     fn last_modified(file: Filename) -> Option<SystemTime> {
@@ -409,17 +425,15 @@ mod itweak {
     /// value already came from a parse).
     fn cleanup_value(value: Box<dyn Any + Send>) {
         if let Ok(s) = value.downcast::<&'static str>() {
-            let leaked: &'static str = *s;
-            // SAFETY: `leaked` was returned by `Box::leak` on a `Box<str>` in
-            // `<&'static str as Tweakable>::parse`. The cached value is about to
-            // be replaced, and the `tweak!` API only ever hands out clones (`&str`
-            // is `Copy`) that the user is expected to use transiently, so there
-            // are no outstanding references at the moment of replacement under
-            // the library's documented usage. Casting `*const str` to `*mut str`
-            // is sound because the original allocation was uniquely owned.
-            let raw: *mut str = leaked as *const str as *mut str;
-            unsafe {
-                drop(Box::from_raw(raw));
+            let s: &'static str = *s;
+            let key = s.as_ptr() as usize;
+            if let Some(OwnedStrPtr(ptr)) = OWNED_STRINGS.lock().unwrap().remove(&key) {
+                // SAFETY: `ptr` came from `Box::into_raw` in this library's
+                // `parse` impl above and has not been freed since (we just
+                // removed its only registry entry).
+                unsafe {
+                    drop(Box::from_raw(ptr));
+                }
             }
         }
     }
