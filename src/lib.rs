@@ -62,18 +62,24 @@
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 #![allow(clippy::needless_doctest_main)]
 
-#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    any(debug_assertions, feature = "release_tweak"),
+    not(target_arch = "wasm32")
+))]
 mod hasher;
 
 pub trait Tweakable: Sized + Send + Clone + 'static {
     fn parse(x: &str) -> Option<Self>;
 }
 
-#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    any(debug_assertions, feature = "release_tweak"),
+    not(target_arch = "wasm32")
+))]
 mod itweak {
     use super::Tweakable;
-    use core::str::FromStr;
     use crate::hasher::FxHashMap;
+    use core::str::FromStr;
     use std::any::Any;
     use std::fs::File;
     use std::io::{BufRead, BufReader};
@@ -160,7 +166,9 @@ mod itweak {
                 .map(|v| v.0)
                 .unwrap_or(remove_starting_quote);
 
-            Some(Box::leak(Box::new(String::from(remove_ending_quote))))
+            Some(Box::leak(
+                String::from(remove_ending_quote).into_boxed_str(),
+            ))
         }
     }
 
@@ -312,6 +320,14 @@ mod itweak {
 
         let parsed: Option<T> = Tweakable::parse(value);
 
+        // Free the previous tweak's allocation, if any. file_version == 0 means
+        // the value is still the source-literal default and must not be freed.
+        if tweak.file_version > 0 {
+            if let Some(old) = tweak.value.take() {
+                cleanup_value(old);
+            }
+        }
+
         tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
         tweak.file_version = file.version;
 
@@ -385,12 +401,35 @@ mod itweak {
             .unwrap_or(true)
     }
 
+    /// Reclaim memory owned by a previously-parsed tweak value.
+    ///
+    /// This MUST NOT be called on the initial source-literal value (the one
+    /// passed in via `tweak!(LIT; expr)`). Callers guarantee this by only
+    /// invoking `cleanup_value` when `tweak.file_version > 0` (i.e. the
+    /// value already came from a parse).
+    fn cleanup_value(value: Box<dyn Any + Send>) {
+        if let Ok(s) = value.downcast::<&'static str>() {
+            let leaked: &'static str = *s;
+            // SAFETY: `leaked` was returned by `Box::leak` on a `Box<str>` in
+            // `<&'static str as Tweakable>::parse`. The cached value is about to
+            // be replaced, and the `tweak!` API only ever hands out clones (`&str`
+            // is `Copy`) that the user is expected to use transiently, so there
+            // are no outstanding references at the moment of replacement under
+            // the library's documented usage. Casting `*const str` to `*mut str`
+            // is sound because the original allocation was uniquely owned.
+            let raw: *mut str = leaked as *const str as *mut str;
+            unsafe {
+                drop(Box::from_raw(raw));
+            }
+        }
+    }
+
     #[cfg(feature = "derive")]
     pub(crate) mod derive {
         use super::*;
 
-        use crate::Tweakable;
         use crate::hasher::FxHashMap;
+        use crate::Tweakable;
         use std::any::Any;
         use std::hash::{Hash, Hasher};
         use std::sync::Mutex;
@@ -627,6 +666,12 @@ mod itweak {
 
             let parsed: Option<T> = Tweakable::parse(value);
 
+            if tweak.file_version > 0 {
+                if let Some(old) = tweak.value.take() {
+                    super::cleanup_value(old);
+                }
+            }
+
             tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
             tweak.file_version = file.version;
 
@@ -635,7 +680,10 @@ mod itweak {
     }
 }
 
-#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    any(debug_assertions, feature = "release_tweak"),
+    not(target_arch = "wasm32")
+))]
 pub fn inline_tweak<T: Tweakable>(
     initial_value: Option<T>,
     filename: &'static str,
@@ -645,7 +693,13 @@ pub fn inline_tweak<T: Tweakable>(
     itweak::get_value(initial_value, filename, line, column)
 }
 
-#[cfg(all(feature = "derive", all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32"))))]
+#[cfg(all(
+    feature = "derive",
+    all(
+        any(debug_assertions, feature = "release_tweak"),
+        not(target_arch = "wasm32")
+    )
+))]
 pub fn inline_tweak_derive<T: Tweakable>(
     file: &'static str,
     function_name: &'static str,
