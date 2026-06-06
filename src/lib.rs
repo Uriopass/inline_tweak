@@ -78,10 +78,11 @@ pub trait Tweakable: Sized + Send + Clone + 'static {
 ))]
 mod itweak {
     use super::Tweakable;
-    use crate::hasher::FxHashMap;
+    use crate::hasher::{FxHashMap, FxHasher};
     use core::str::FromStr;
     use std::any::Any;
     use std::fs::File;
+    use std::hash::{Hash, Hasher};
     use std::io::{BufRead, BufReader};
     use std::sync::{LazyLock, Mutex};
     use std::time::{Instant, SystemTime};
@@ -166,15 +167,17 @@ mod itweak {
                 .map(|v| v.0)
                 .unwrap_or(remove_starting_quote);
 
-            let raw = Box::into_raw(String::from(remove_ending_quote).into_boxed_str());
-            let key = raw.addr();
-
-            OWNED_STRINGS.lock().unwrap().insert(key, OwnedStrPtr(raw));
-
-            // SAFETY: `raw` was just produced by `Box::into_raw`, is uniquely
-            // owned, and the registry will keep its provenance alive until
-            // `cleanup_value` deallocates it.
-            Some(unsafe { &*raw })
+            let mut interned = INTERNED_STRINGS.lock().unwrap();
+            let mut hasher = FxHasher::default();
+            remove_ending_quote.hash(&mut hasher);
+            let hash = hasher.finish();
+            Some(if let Some(&existing_str) = interned.get(&hash) {
+                existing_str
+            } else {
+                let leaked = Box::leak(String::from(remove_ending_quote).into_boxed_str()) as &str;
+                interned.insert(hash, leaked);
+                leaked
+            })
         }
     }
 
@@ -223,12 +226,6 @@ mod itweak {
 
     type Filename = &'static str;
 
-    // A pointer to an owned, leaked string.
-    struct OwnedStrPtr(*mut str);
-
-    // Safety: This type has the ownership semantics of `Box<str>`
-    unsafe impl Send for OwnedStrPtr {}
-
     /// Stores the values of the tweaks. The key is the file, line and column of the tweak.
     static VALUES: LazyLock<Mutex<FxHashMap<TweakKey, TweakValue>>> =
         LazyLock::new(Default::default);
@@ -239,8 +236,7 @@ mod itweak {
     static WATCHERS: LazyLock<Mutex<FxHashMap<Filename, FileWatcher>>> =
         LazyLock::new(Default::default);
 
-    // Used to allow strings to be freed
-    static OWNED_STRINGS: LazyLock<Mutex<FxHashMap<usize, OwnedStrPtr>>> =
+    static INTERNED_STRINGS: LazyLock<Mutex<FxHashMap<u64, &'static str>>> =
         LazyLock::new(Default::default);
 
     fn last_modified(file: Filename) -> Option<SystemTime> {
@@ -336,14 +332,6 @@ mod itweak {
 
         let parsed: Option<T> = Tweakable::parse(value);
 
-        // Free the previous tweak's allocation, if any. file_version == 0 means
-        // the value is still the source-literal default and must not be freed.
-        if tweak.file_version > 0 {
-            if let Some(old) = tweak.value.take() {
-                cleanup_value(old);
-            }
-        }
-
         tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
         tweak.file_version = file.version;
 
@@ -415,27 +403,6 @@ mod itweak {
                 time.as_secs_f32() > 0.5
             })
             .unwrap_or(true)
-    }
-
-    /// Reclaim memory owned by a previously-parsed tweak value.
-    ///
-    /// This MUST NOT be called on the initial source-literal value (the one
-    /// passed in via `tweak!(LIT; expr)`). Callers guarantee this by only
-    /// invoking `cleanup_value` when `tweak.file_version > 0` (i.e. the
-    /// value already came from a parse).
-    fn cleanup_value(value: Box<dyn Any + Send>) {
-        if let Ok(s) = value.downcast::<&'static str>() {
-            let s: &'static str = *s;
-            let key = s.as_ptr() as usize;
-            if let Some(OwnedStrPtr(ptr)) = OWNED_STRINGS.lock().unwrap().remove(&key) {
-                // SAFETY: `ptr` came from `Box::into_raw` in this library's
-                // `parse` impl above and has not been freed since (we just
-                // removed its only registry entry).
-                unsafe {
-                    drop(Box::from_raw(ptr));
-                }
-            }
-        }
     }
 
     #[cfg(feature = "derive")]
@@ -634,7 +601,7 @@ mod itweak {
 
             let tweak = lock
                 .entry(DeriveValueKey {
-                    filename: filename,
+                    filename,
                     nth,
                     fname_hash: {
                         let mut hasher = crate::hasher::FxHasher::default();
@@ -679,12 +646,6 @@ mod itweak {
             let value = &**file.values.get(function_name)?.get(nth as usize)?;
 
             let parsed: Option<T> = Tweakable::parse(value);
-
-            if tweak.file_version > 0 {
-                if let Some(old) = tweak.value.take() {
-                    super::cleanup_value(old);
-                }
-            }
 
             tweak.value = parsed.map(|inner| Box::new(inner) as Box<dyn Any + Send>);
             tweak.file_version = file.version;
