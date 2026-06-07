@@ -235,6 +235,44 @@ mod itweak {
     static INTERNED_STRINGS: LazyLock<Mutex<FxHashSet<&'static str>>> =
         LazyLock::new(Default::default);
 
+    /// Caches the resolution of a `file!()` path to a path that actually opens.
+    static RESOLVED_PATHS: LazyLock<Mutex<FxHashMap<Filename, Filename>>> =
+        LazyLock::new(Default::default);
+
+    /// `file!()` is relative to the workspace root, but the process may run from
+    /// a subdirectory (e.g. a workspace member), so opening it against the CWD
+    /// fails. Cargo always runs at or below the workspace root, so the root is
+    /// an ancestor of the CWD: walk up from the CWD joining `file!()` until the
+    /// file is found. The result is cached and leaked as `&'static str`.
+    fn resolve(filename: Filename) -> Filename {
+        if let Some(&resolved) = RESOLVED_PATHS.lock().unwrap().get(filename) {
+            return resolved;
+        }
+        let resolved = resolve_uncached(filename);
+        RESOLVED_PATHS.lock().unwrap().insert(filename, resolved);
+        resolved
+    }
+
+    fn resolve_uncached(filename: Filename) -> Filename {
+        // Fast path: opens as-is against the CWD (standalone crate, or a run
+        // from the workspace root). No walk, no allocation.
+        if std::path::Path::new(filename).is_file() {
+            return filename;
+        }
+        let Ok(cwd) = std::env::current_dir() else {
+            return filename;
+        };
+        let mut dir = cwd.parent();
+        while let Some(d) = dir {
+            let candidate = d.join(filename);
+            if candidate.is_file() {
+                return Box::leak(candidate.to_string_lossy().into_owned().into_boxed_str());
+            }
+            dir = d.parent();
+        }
+        filename
+    }
+
     fn last_modified(file: Filename) -> Option<SystemTime> {
         File::open(file).ok()?.metadata().ok()?.modified().ok()
     }
@@ -340,6 +378,7 @@ mod itweak {
         line: u32,
         column: u32,
     ) -> Option<T> {
+        let filename = resolve(filename);
         let mut lock = VALUES.lock().unwrap();
 
         let tweak = lock
@@ -379,6 +418,7 @@ mod itweak {
 
     #[allow(dead_code)]
     pub fn watch_modified(file: Filename) -> bool {
+        let file = resolve(file);
         let mut lock = WATCHERS.lock().unwrap();
         let entry = lock.entry(file);
 
@@ -593,6 +633,7 @@ mod itweak {
             function_name: &'static str,
             nth: u32,
         ) -> Option<T> {
+            let filename = super::resolve(filename);
             let mut lock = VALUES_DERIVE.lock().unwrap();
 
             let tweak = lock
