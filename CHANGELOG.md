@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.5]
+ - Intern strings from tweak!("strings")
+ - Allow running inline_tweak from workspace members
+
 ## [1.2.4]
  - Fix wasm32 builds: disable inline_tweak compilation entirely (so there's no std::time)
 
