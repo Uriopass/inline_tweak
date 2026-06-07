@@ -62,20 +62,27 @@
 //! It is accessible behind the feature flag `"release_tweak"` which is not enabled by default.
 #![allow(clippy::needless_doctest_main)]
 
-#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    any(debug_assertions, feature = "release_tweak"),
+    not(target_arch = "wasm32")
+))]
 mod hasher;
 
 pub trait Tweakable: Sized + Send + Clone + 'static {
     fn parse(x: &str) -> Option<Self>;
 }
 
-#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    any(debug_assertions, feature = "release_tweak"),
+    not(target_arch = "wasm32")
+))]
 mod itweak {
     use super::Tweakable;
+    use crate::hasher::{FxHashMap, FxHasher};
     use core::str::FromStr;
-    use crate::hasher::FxHashMap;
     use std::any::Any;
     use std::fs::File;
+    use std::hash::{Hash, Hasher};
     use std::io::{BufRead, BufReader};
     use std::sync::{LazyLock, Mutex};
     use std::time::{Instant, SystemTime};
@@ -160,7 +167,17 @@ mod itweak {
                 .map(|v| v.0)
                 .unwrap_or(remove_starting_quote);
 
-            Some(Box::leak(Box::new(String::from(remove_ending_quote))))
+            let mut interned = INTERNED_STRINGS.lock().unwrap();
+            let mut hasher = FxHasher::default();
+            remove_ending_quote.hash(&mut hasher);
+            let hash = hasher.finish();
+            Some(if let Some(&existing_str) = interned.get(&hash) {
+                existing_str
+            } else {
+                let leaked = Box::leak(String::from(remove_ending_quote).into_boxed_str()) as &str;
+                interned.insert(hash, leaked);
+                leaked
+            })
         }
     }
 
@@ -217,6 +234,9 @@ mod itweak {
         LazyLock::new(Default::default);
 
     static WATCHERS: LazyLock<Mutex<FxHashMap<Filename, FileWatcher>>> =
+        LazyLock::new(Default::default);
+
+    static INTERNED_STRINGS: LazyLock<Mutex<FxHashMap<u64, &'static str>>> =
         LazyLock::new(Default::default);
 
     fn last_modified(file: Filename) -> Option<SystemTime> {
@@ -389,8 +409,8 @@ mod itweak {
     pub(crate) mod derive {
         use super::*;
 
-        use crate::Tweakable;
         use crate::hasher::FxHashMap;
+        use crate::Tweakable;
         use std::any::Any;
         use std::hash::{Hash, Hasher};
         use std::sync::Mutex;
@@ -581,7 +601,7 @@ mod itweak {
 
             let tweak = lock
                 .entry(DeriveValueKey {
-                    filename: filename,
+                    filename,
                     nth,
                     fname_hash: {
                         let mut hasher = crate::hasher::FxHasher::default();
@@ -635,7 +655,10 @@ mod itweak {
     }
 }
 
-#[cfg(all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32")))]
+#[cfg(all(
+    any(debug_assertions, feature = "release_tweak"),
+    not(target_arch = "wasm32")
+))]
 pub fn inline_tweak<T: Tweakable>(
     initial_value: Option<T>,
     filename: &'static str,
@@ -645,7 +668,13 @@ pub fn inline_tweak<T: Tweakable>(
     itweak::get_value(initial_value, filename, line, column)
 }
 
-#[cfg(all(feature = "derive", all(any(debug_assertions, feature = "release_tweak"), not(target_arch = "wasm32"))))]
+#[cfg(all(
+    feature = "derive",
+    all(
+        any(debug_assertions, feature = "release_tweak"),
+        not(target_arch = "wasm32")
+    )
+))]
 pub fn inline_tweak_derive<T: Tweakable>(
     file: &'static str,
     function_name: &'static str,
