@@ -4,9 +4,10 @@
 
 use core::default::Default;
 use core::hash::{BuildHasher, Hasher};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub(crate) type FxHashMap<K, V> = HashMap<K, V, FxBuildHasher>;
+pub(crate) type FxHashSet<T> = HashSet<T, FxBuildHasher>;
 
 /// A speedy hash algorithm for use within rustc. The hashmap in liballoc
 /// by default uses SipHash which isn't quite as speedy as we want. In the

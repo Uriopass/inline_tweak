@@ -78,11 +78,10 @@ pub trait Tweakable: Sized + Send + Clone + 'static {
 ))]
 mod itweak {
     use super::Tweakable;
-    use crate::hasher::{FxHashMap, FxHasher};
+    use crate::hasher::{FxHashMap, FxHashSet};
     use core::str::FromStr;
     use std::any::Any;
     use std::fs::File;
-    use std::hash::{Hash, Hasher};
     use std::io::{BufRead, BufReader};
     use std::sync::{LazyLock, Mutex};
     use std::time::{Instant, SystemTime};
@@ -168,14 +167,11 @@ mod itweak {
                 .unwrap_or(remove_starting_quote);
 
             let mut interned = INTERNED_STRINGS.lock().unwrap();
-            let mut hasher = FxHasher::default();
-            remove_ending_quote.hash(&mut hasher);
-            let hash = hasher.finish();
-            Some(if let Some(&existing_str) = interned.get(&hash) {
+            Some(if let Some(&existing_str) = interned.get(remove_ending_quote) {
                 existing_str
             } else {
                 let leaked = Box::leak(String::from(remove_ending_quote).into_boxed_str()) as &str;
-                interned.insert(hash, leaked);
+                interned.insert(leaked);
                 leaked
             })
         }
@@ -236,7 +232,7 @@ mod itweak {
     static WATCHERS: LazyLock<Mutex<FxHashMap<Filename, FileWatcher>>> =
         LazyLock::new(Default::default);
 
-    static INTERNED_STRINGS: LazyLock<Mutex<FxHashMap<u64, &'static str>>> =
+    static INTERNED_STRINGS: LazyLock<Mutex<FxHashSet<&'static str>>> =
         LazyLock::new(Default::default);
 
     fn last_modified(file: Filename) -> Option<SystemTime> {
